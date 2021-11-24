@@ -41,6 +41,8 @@ namespace FlightMonitor
         public double NumValue;
         public string StrValue;
         public string Units;
+
+        public bool Pending;
     };
 
     public class FSMonitor
@@ -189,6 +191,11 @@ namespace FlightMonitor
                     }
                 }
             }
+
+            if (AllReceived())
+            {
+                SendResult();
+            }
         }
 
         private void OnTick(object sender, EventArgs e)
@@ -198,7 +205,25 @@ namespace FlightMonitor
             foreach (SimvarRequest request in _simvarRequests)
             {
                 _simConnect?.RequestDataOnSimObjectType(request.Request, request.Def, 0, SIMCONNECT_SIMOBJECT_TYPE.USER);
+                request.Pending = true;
             }
+        }
+
+        private bool AllReceived()
+        {
+            foreach (SimvarRequest request in _simvarRequests)
+            {
+                if (request.Pending)
+                {
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        private void SendResult()
+        {
+
         }
     }
 }
