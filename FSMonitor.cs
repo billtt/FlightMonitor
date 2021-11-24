@@ -12,31 +12,31 @@ namespace FlightMonitor
     {
         public event PropertyChangedEventHandler PropertyChanged;
 
-        public void OnPropertyChanged([CallerMemberName] string _sPropertyName = null)
+        public void OnPropertyChanged([CallerMemberName] string propertyName = null)
         {
-            PropertyChangedEventHandler hEventHandler = this.PropertyChanged;
-            if (hEventHandler != null && !string.IsNullOrEmpty(_sPropertyName))
+            PropertyChangedEventHandler eventHandler = this.PropertyChanged;
+            if (eventHandler != null && !string.IsNullOrEmpty(propertyName))
             {
-                hEventHandler(this, new PropertyChangedEventArgs(_sPropertyName));
+                eventHandler(this, new PropertyChangedEventArgs(propertyName));
             }
         }
 
-        protected bool SetProperty<T>(ref T _tField, T _tValue, [CallerMemberName] string _sPropertyName = null)
+        protected bool SetProperty<T>(ref T field, T value, [CallerMemberName] string propertyName = null)
         {
-            return this.SetProperty(ref _tField, _tValue, out T tPreviousValue, _sPropertyName);
+            return this.SetProperty(ref field, value, out T previousValue, propertyName);
         }
 
-        protected bool SetProperty<T>(ref T _tField, T _tValue, out T _tPreviousValue, [CallerMemberName] string _sPropertyName = null)
+        protected bool SetProperty<T>(ref T field, T value, out T previousValue, [CallerMemberName] string propertyName = null)
         {
-            if (!object.Equals(_tField, _tValue))
+            if (!object.Equals(field, value))
             {
-                _tPreviousValue = _tField;
-                _tField = _tValue;
-                this.OnPropertyChanged(_sPropertyName);
+                previousValue = field;
+                field = value;
+                this.OnPropertyChanged(propertyName);
                 return true;
             }
 
-            _tPreviousValue = default(T);
+            previousValue = default(T);
             return false;
         }
     }
@@ -58,7 +58,7 @@ namespace FlightMonitor
     {
         // this is how you declare a fixed size string
         [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 256)]
-        public String sValue;
+        public String value;
 
         // other definitions can be added to this struct
         // ...
@@ -66,33 +66,33 @@ namespace FlightMonitor
 
     public class SimvarRequest : ObservableObject
     {
-        public DEFINITION eDef = DEFINITION.Dummy;
-        public REQUEST eRequest = REQUEST.Dummy;
+        public DEFINITION Def = DEFINITION.Dummy;
+        public REQUEST Request = REQUEST.Dummy;
 
-        public string sName { get; set; }
-        public bool bIsString { get; set; }
-        public double dValue
+        public string Name { get; set; }
+        public bool IsString { get; set; }
+        public double NumValue
         {
-            get { return m_dValue; }
-            set { this.SetProperty(ref m_dValue, value); }
+            get { return _numValue; }
+            set { this.SetProperty(ref this._numValue, value); }
         }
-        private double m_dValue = 0.0;
-        public string sValue
+        private double _numValue = 0.0;
+        public string StrValue
         {
-            get { return m_sValue; }
-            set { this.SetProperty(ref m_sValue, value); }
+            get { return _strValue; }
+            set { this.SetProperty(ref _strValue, value); }
         }
-        private string m_sValue = null;
+        private string _strValue = null;
 
-        public string sUnits { get; set; }
+        public string Units { get; set; }
     };
 
     public class FSMonitor
     {
-        private SimConnect simConnect = null;
-        private DispatcherTimer timer = new DispatcherTimer();
+        private SimConnect _simConnect = null;
+        private DispatcherTimer _timer = new DispatcherTimer();
 
-        public bool connected
+        public bool Connected
         {
             get {return _connected;}
         }
@@ -101,12 +101,12 @@ namespace FlightMonitor
         /// User-defined win32 event
         public const int WM_USER_SIMCONNECT = 0x0402;
 
-        public ObservableCollection<SimvarRequest> simvarRequests = new ObservableCollection<SimvarRequest>();
+        private ObservableCollection<SimvarRequest> _simvarRequests = new ObservableCollection<SimvarRequest>();
 
         public FSMonitor()
         {
             _connected = false;
-            timer.Interval = new TimeSpan(0, 0, 0, 10, 0);
+            _timer.Interval = new TimeSpan(0, 0, 0, 10, 0);
         }
 
         public void Start()
@@ -116,7 +116,7 @@ namespace FlightMonitor
 
         public void ReceiveSimConnectMessage()
         {
-            simConnect?.ReceiveMessage();
+            _simConnect?.ReceiveMessage();
         }
 
         private bool Connect()
@@ -124,7 +124,7 @@ namespace FlightMonitor
             Console.WriteLine("Connecting to Flight Simulator...");
             try
             {
-                simConnect = new SimConnect("FSMonitor", IntPtr.Zero, WM_USER_SIMCONNECT, null, 0);
+                _simConnect = new SimConnect("FSMonitor", IntPtr.Zero, WM_USER_SIMCONNECT, null, 0);
             }
             catch (COMException e)
             {
@@ -136,11 +136,11 @@ namespace FlightMonitor
 
         private void Disconnect()
         {
-            timer.Stop();
-            if (simConnect != null)
+            _timer.Stop();
+            if (_simConnect != null)
             {
-                simConnect.Dispose();
-                simConnect = null;
+                _simConnect.Dispose();
+                _simConnect = null;
             }
             _connected = false;
             Console.WriteLine("Disconnected.");
@@ -148,23 +148,23 @@ namespace FlightMonitor
 
         private bool RegisterToSimConnect(SimvarRequest request)
         {
-            if (simConnect != null)
+            if (_simConnect != null)
             {
-                if (request.bIsString)
+                if (request.IsString)
                 {
                     /// Define a data structure containing string value
-                    simConnect.AddToDataDefinition(request.eDef, request.sName, "", SIMCONNECT_DATATYPE.STRING256, 0.0f, SimConnect.SIMCONNECT_UNUSED);
+                    _simConnect.AddToDataDefinition(request.Def, request.Name, "", SIMCONNECT_DATATYPE.STRING256, 0.0f, SimConnect.SIMCONNECT_UNUSED);
                     /// IMPORTANT: Register it with the simconnect managed wrapper marshaller
                     /// If you skip this step, you will only receive a uint in the .dwData field.
-                    simConnect.RegisterDataDefineStruct<Struct1>(request.eDef);
+                    _simConnect.RegisterDataDefineStruct<Struct1>(request.Def);
                 }
                 else
                 {
                     /// Define a data structure containing numerical value
-                    simConnect.AddToDataDefinition(request.eDef, request.sName, request.sUnits, SIMCONNECT_DATATYPE.FLOAT64, 0.0f, SimConnect.SIMCONNECT_UNUSED);
+                    _simConnect.AddToDataDefinition(request.Def, request.Name, request.Units, SIMCONNECT_DATATYPE.FLOAT64, 0.0f, SimConnect.SIMCONNECT_UNUSED);
                     /// IMPORTANT: Register it with the simconnect managed wrapper marshaller
                     /// If you skip this step, you will only receive a uint in the .dwData field.
-                    simConnect.RegisterDataDefineStruct<double>(request.eDef);
+                    _simConnect.RegisterDataDefineStruct<double>(request.Def);
                 }
 
                 return true;
@@ -181,15 +181,15 @@ namespace FlightMonitor
             _connected = true;
 
             // Register pending requests
-            foreach (SimvarRequest request in simvarRequests)
+            foreach (SimvarRequest request in _simvarRequests)
             {
                 if (!RegisterToSimConnect(request))
                 {
-                    Console.WriteLine("Request register failed: " + request.sName);
+                    Console.WriteLine("Request register failed: " + request.Name);
                 }
             }
 
-            timer.Start();
+            _timer.Start();
         }
 
         /// The case where the user closes game
@@ -211,8 +211,9 @@ namespace FlightMonitor
         {
             Console.WriteLine("SimConnect_OnRecvSimobjectDataBytype");
 
-            uint iRequest = data.dwRequestID;
-            uint iObject = data.dwObjectID;
+            uint requestId = data.dwRequestID;
+            uint objectId = data.dwObjectID;
+
         }
     }
 }
