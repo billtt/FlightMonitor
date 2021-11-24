@@ -2,45 +2,12 @@
 using Microsoft.FlightSimulator.SimConnect;
 using System.Runtime.InteropServices;
 using System.Windows.Threading;
-using System.Collections.ObjectModel;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 
 namespace FlightMonitor
 {
-    public class ObservableObject : INotifyPropertyChanged
-    {
-        public event PropertyChangedEventHandler PropertyChanged;
-
-        public void OnPropertyChanged([CallerMemberName] string propertyName = null)
-        {
-            PropertyChangedEventHandler eventHandler = this.PropertyChanged;
-            if (eventHandler != null && !string.IsNullOrEmpty(propertyName))
-            {
-                eventHandler(this, new PropertyChangedEventArgs(propertyName));
-            }
-        }
-
-        protected bool SetProperty<T>(ref T field, T value, [CallerMemberName] string propertyName = null)
-        {
-            return this.SetProperty(ref field, value, out T previousValue, propertyName);
-        }
-
-        protected bool SetProperty<T>(ref T field, T value, out T previousValue, [CallerMemberName] string propertyName = null)
-        {
-            if (!object.Equals(field, value))
-            {
-                previousValue = field;
-                field = value;
-                this.OnPropertyChanged(propertyName);
-                return true;
-            }
-
-            previousValue = default(T);
-            return false;
-        }
-    }
-
     public enum DEFINITION
     {
         Dummy = 0
@@ -64,27 +31,16 @@ namespace FlightMonitor
         // ...
     };
 
-    public class SimvarRequest : ObservableObject
+    public class SimvarRequest
     {
         public DEFINITION Def = DEFINITION.Dummy;
         public REQUEST Request = REQUEST.Dummy;
 
-        public string Name { get; set; }
-        public bool IsString { get; set; }
-        public double NumValue
-        {
-            get { return _numValue; }
-            set { this.SetProperty(ref this._numValue, value); }
-        }
-        private double _numValue = 0.0;
-        public string StrValue
-        {
-            get { return _strValue; }
-            set { this.SetProperty(ref _strValue, value); }
-        }
-        private string _strValue = null;
-
-        public string Units { get; set; }
+        public string Name;
+        public bool IsString;
+        public double NumValue;
+        public string StrValue;
+        public string Units;
     };
 
     public class FSMonitor
@@ -101,12 +57,13 @@ namespace FlightMonitor
         /// User-defined win32 event
         public const int WM_USER_SIMCONNECT = 0x0402;
 
-        private ObservableCollection<SimvarRequest> _simvarRequests = new ObservableCollection<SimvarRequest>();
+        private List<SimvarRequest> _simvarRequests = new List<SimvarRequest>();
 
         public FSMonitor()
         {
             _connected = false;
-            _timer.Interval = new TimeSpan(0, 0, 0, 10, 0);
+            _timer.Interval = new TimeSpan(0, 0, 0, 3, 0);
+            _timer.Tick += new EventHandler(OnTick);
         }
 
         public void Start()
@@ -203,8 +160,8 @@ namespace FlightMonitor
 
         private void OnRecvException(SimConnect sender, SIMCONNECT_RECV_EXCEPTION data)
         {
-            SIMCONNECT_EXCEPTION eException = (SIMCONNECT_EXCEPTION)data.dwException;
-            Console.WriteLine("SimConnect_OnRecvException: " + eException.ToString());
+            SIMCONNECT_EXCEPTION exception = (SIMCONNECT_EXCEPTION)data.dwException;
+            Console.WriteLine("SimConnect_OnRecvException: " + exception.ToString());
         }
 
         private void OnRecvSimobjectDataBytype(SimConnect sender, SIMCONNECT_RECV_SIMOBJECT_DATA_BYTYPE data)
@@ -214,6 +171,34 @@ namespace FlightMonitor
             uint requestId = data.dwRequestID;
             uint objectId = data.dwObjectID;
 
+            foreach (SimvarRequest request in _simvarRequests)
+            {
+                if (requestId == (uint)request.Request)
+                {
+                    if (request.IsString)
+                    {
+                        Struct1 result = (Struct1)data.dwData[0];
+                        request.NumValue = 0;
+                        request.StrValue = result.value;
+                    }
+                    else
+                    {
+                        double value = (double)data.dwData[0];
+                        request.NumValue = value;
+                        request.StrValue = value.ToString("F9");
+                    }
+                }
+            }
+        }
+
+        private void OnTick(object sender, EventArgs e)
+        {
+            Console.WriteLine("OnTick: Requesting vars");
+
+            foreach (SimvarRequest request in _simvarRequests)
+            {
+                _simConnect?.RequestDataOnSimObjectType(request.Request, request.Def, 0, SIMCONNECT_SIMOBJECT_TYPE.USER);
+            }
         }
     }
 }
