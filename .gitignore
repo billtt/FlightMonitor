@@ -3,3 +3,5 @@ obj
 .vs
 server/.idea
 server/node_modules
+FlightMonitor.csproj.user
+packages
