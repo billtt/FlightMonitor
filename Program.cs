@@ -13,7 +13,7 @@ namespace FlightMonitor
     {
         static void Main(string[] args)
         {
-            Console.ReadLine();
+            new FSMonitor().Start();
         }
     }
 

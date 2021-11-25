@@ -5,6 +5,7 @@ using System.Windows.Threading;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
+using System.Json;
 
 namespace FlightMonitor
 {
@@ -37,12 +38,17 @@ namespace FlightMonitor
         public REQUEST Request = REQUEST.Dummy;
 
         public string Name;
-        public bool IsString;
-        public double NumValue;
-        public string StrValue;
-        public string Units;
+        public bool IsString = false;
+        public double NumValue = 0.0;
+        public string StrValue = "";
+        public string Units = "";
 
-        public bool Pending;
+        public bool Pending = true;
+
+        public SimvarRequest(String name)
+        {
+            this.Name = name;
+        }
     };
 
     public class FSMonitor
@@ -59,7 +65,7 @@ namespace FlightMonitor
         /// User-defined win32 event
         public const int WM_USER_SIMCONNECT = 0x0402;
 
-        private List<SimvarRequest> _simvarRequests = new List<SimvarRequest>();
+        private List<SimvarRequest> _simvarRequests;
 
         public FSMonitor()
         {
@@ -70,12 +76,23 @@ namespace FlightMonitor
 
         public void Start()
         {
+            InitRequests();
             Connect();
         }
 
-        public void ReceiveSimConnectMessage()
+        private void InitRequests()
         {
-            _simConnect?.ReceiveMessage();
+            _simvarRequests = new List<SimvarRequest>
+            {
+                new SimvarRequest("FUEL TOTAL QUANTITY WEIGHT"),
+                new SimvarRequest("ENG FUEL FLOW PPH:1"),
+                new SimvarRequest("ENG FUEL FLOW PPH:2"),
+                new SimvarRequest("GROUND VELOCITY"),
+                new SimvarRequest("AIRSPEED TRUE"),
+                new SimvarRequest("AIRSPEED INDICATED"),
+                new SimvarRequest("GPS FLIGHTPLAN TOTAL DISTANCE"),
+                new SimvarRequest("GPS TARGET DISTANCE")
+            };
         }
 
         private bool Connect()
@@ -84,6 +101,10 @@ namespace FlightMonitor
             try
             {
                 _simConnect = new SimConnect("FSMonitor", IntPtr.Zero, WM_USER_SIMCONNECT, null, 0);
+                _simConnect.OnRecvOpen += new SimConnect.RecvOpenEventHandler(OnRecvOpen);
+                _simConnect.OnRecvQuit += new SimConnect.RecvQuitEventHandler(OnRecvQuit);
+                _simConnect.OnRecvException += new SimConnect.RecvExceptionEventHandler(OnRecvException);
+                _simConnect.OnRecvSimobjectDataBytype += new SimConnect.RecvSimobjectDataBytypeEventHandler(OnRecvSimobjectDataBytype);
             }
             catch (COMException e)
             {
@@ -189,6 +210,7 @@ namespace FlightMonitor
                         request.NumValue = value;
                         request.StrValue = value.ToString("F9");
                     }
+                    request.Pending = false;
                 }
             }
 
@@ -223,7 +245,19 @@ namespace FlightMonitor
 
         private void SendResult()
         {
-
+            JsonObject json = new JsonObject();
+            json["timestamp"] = DateTime.UtcNow;
+            foreach (SimvarRequest request in _simvarRequests)
+            {
+                if (request.IsString)
+                {
+                    json[request.Name] = request.StrValue;
+                } else
+                {
+                    json[request.Name] = request.NumValue;
+                }
+            }
+            Console.WriteLine("Sending result:\n" + json.ToString());
         }
     }
 }

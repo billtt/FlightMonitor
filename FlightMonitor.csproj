@@ -46,6 +46,7 @@
       <HintPath>Microsoft.FlightSimulator.SimConnect.dll</HintPath>
     </Reference>
     <Reference Include="WindowsBase" />
+    <Reference Include="System.Json" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Program.cs" />
