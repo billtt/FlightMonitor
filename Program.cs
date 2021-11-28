@@ -13,7 +13,14 @@ namespace FlightMonitor
     {
         static void Main(string[] args)
         {
-            new FSMonitor().Start();
+            FSMonitor monitor = new FSMonitor();
+            monitor.Start();
+
+            while (true)
+            {
+                monitor.Dispatch();
+                Thread.Sleep(100);
+            }
         }
     }
 

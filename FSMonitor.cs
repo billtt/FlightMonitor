@@ -1,7 +1,7 @@
 ﻿using System;
 using Microsoft.FlightSimulator.SimConnect;
 using System.Runtime.InteropServices;
-using System.Windows.Threading;
+using System.Threading;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
@@ -37,24 +37,33 @@ namespace FlightMonitor
         public DEFINITION Def = DEFINITION.Dummy;
         public REQUEST Request = REQUEST.Dummy;
 
-        public string Name;
+        public string Name { get; set; }
         public bool IsString = false;
         public double NumValue = 0.0;
         public string StrValue = "";
-        public string Units = "";
+        public string Units;
 
         public bool Pending = true;
 
-        public SimvarRequest(String name)
+        public string ShortName;
+
+        private static int _req = 0;
+        private static int _def = 0;
+
+        public SimvarRequest(String name, String shortName, String units)
         {
             this.Name = name;
+            this.ShortName = shortName;
+            this.Units = units;
+            this.Request = (REQUEST)(_req++);
+            this.Def = (DEFINITION)(_def++);
         }
     };
 
     public class FSMonitor
     {
         private SimConnect _simConnect = null;
-        private DispatcherTimer _timer = new DispatcherTimer();
+        private Timer _timer;
 
         public bool Connected
         {
@@ -70,8 +79,6 @@ namespace FlightMonitor
         public FSMonitor()
         {
             _connected = false;
-            _timer.Interval = new TimeSpan(0, 0, 0, 3, 0);
-            _timer.Tick += new EventHandler(OnTick);
         }
 
         public void Start()
@@ -80,18 +87,21 @@ namespace FlightMonitor
             Connect();
         }
 
+        public void Dispatch()
+        {
+            _simConnect?.ReceiveMessage();
+        }
+
         private void InitRequests()
         {
             _simvarRequests = new List<SimvarRequest>
             {
-                new SimvarRequest("FUEL TOTAL QUANTITY WEIGHT"),
-                new SimvarRequest("ENG FUEL FLOW PPH:1"),
-                new SimvarRequest("ENG FUEL FLOW PPH:2"),
-                new SimvarRequest("GROUND VELOCITY"),
-                new SimvarRequest("AIRSPEED TRUE"),
-                new SimvarRequest("AIRSPEED INDICATED"),
-                new SimvarRequest("GPS FLIGHTPLAN TOTAL DISTANCE"),
-                new SimvarRequest("GPS TARGET DISTANCE")
+                new SimvarRequest("FUEL TOTAL QUANTITY WEIGHT", "fuelWeight", "Pounds"),
+                new SimvarRequest("GROUND VELOCITY", "GS", "Knots"),
+                new SimvarRequest("AIRSPEED TRUE", "TAS", "Knots"),
+                new SimvarRequest("AIRSPEED INDICATED", "IAS", "Knots"),
+                new SimvarRequest("GPS FLIGHTPLAN TOTAL DISTANCE", "totalDistance", "Meters"),
+                new SimvarRequest("GPS ETE", "ETE", "Seconds")
             };
         }
 
@@ -116,7 +126,11 @@ namespace FlightMonitor
 
         private void Disconnect()
         {
-            _timer.Stop();
+            if (_timer != null)
+            {
+                _timer.Dispose();
+                _timer = null;
+            }
             if (_simConnect != null)
             {
                 _simConnect.Dispose();
@@ -169,7 +183,7 @@ namespace FlightMonitor
                 }
             }
 
-            _timer.Start();
+            _timer = new Timer(OnTick, null, 3000, 3000);
         }
 
         /// The case where the user closes game
@@ -189,10 +203,10 @@ namespace FlightMonitor
 
         private void OnRecvSimobjectDataBytype(SimConnect sender, SIMCONNECT_RECV_SIMOBJECT_DATA_BYTYPE data)
         {
-            Console.WriteLine("SimConnect_OnRecvSimobjectDataBytype");
-
             uint requestId = data.dwRequestID;
             uint objectId = data.dwObjectID;
+
+            //Console.WriteLine("SimConnect_OnRecvSimobjectDataBytype ID=" + requestId);
 
             foreach (SimvarRequest request in _simvarRequests)
             {
@@ -220,9 +234,9 @@ namespace FlightMonitor
             }
         }
 
-        private void OnTick(object sender, EventArgs e)
+        private void OnTick(object _)
         {
-            Console.WriteLine("OnTick: Requesting vars");
+            //Console.WriteLine("OnTick: Requesting vars");
 
             foreach (SimvarRequest request in _simvarRequests)
             {
@@ -243,20 +257,40 @@ namespace FlightMonitor
             return true;
         }
 
+        double _lastFuel = 0;
+        DateTime _lastTime;
         private void SendResult()
         {
             JsonObject json = new JsonObject();
-            json["timestamp"] = DateTime.UtcNow;
+            DateTime now = DateTime.Now;
+            json["timestamp"] = now.ToString();
             foreach (SimvarRequest request in _simvarRequests)
             {
                 if (request.IsString)
                 {
-                    json[request.Name] = request.StrValue;
+                    json[request.ShortName] = request.StrValue;
                 } else
                 {
-                    json[request.Name] = request.NumValue;
+                    json[request.ShortName] = request.NumValue;
                 }
             }
+
+            // calculate remaining distance
+            double distance = json["GS"] * json["ETE"] / 3600;
+            json["distance"] = distance;
+
+            // calculate fuel per hour
+            double fuelRate = 0;
+            double fuel = json["fuelWeight"];
+            if (_lastFuel > 0)
+            {
+                TimeSpan timeSpan = now - _lastTime;
+                fuelRate = (_lastFuel - fuel) * 3600 / timeSpan.TotalSeconds;
+            }
+            json["fuelPerHour"] = fuelRate;
+            _lastFuel = fuel;
+            _lastTime = now;
+
             Console.WriteLine("Sending result:\n" + json.ToString());
         }
     }
