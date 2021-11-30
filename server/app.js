@@ -3,12 +3,12 @@ const bodyParser = require('body-parser');
 const path = require('path');
 const app = express();
 
-var status = '';
+var status = {};
 
 app.set('views', __dirname + '/views');
 app.set('view engine', 'ejs');
 app.use(express.static(path.join(__dirname, 'public')));
-app.use(bodyParser.text());
+app.use(bodyParser.json());
 
 app.post('/', (req, res) => {
     status = req.body;
@@ -16,8 +16,11 @@ app.post('/', (req, res) => {
 });
 
 app.get('/', (req, res) => {
-    res.locals.status = status;
     res.render('index');
+});
+
+app.get('/status', (req, res) => {
+    res.json(status);
 });
 
 function start() {
