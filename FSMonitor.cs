@@ -6,6 +6,9 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Json;
+using System.Net;
+using System.Net.Http;
+using System.Text;
 
 namespace FlightMonitor
 {
@@ -101,7 +104,8 @@ namespace FlightMonitor
                 new SimvarRequest("AIRSPEED TRUE", "TAS", "Knots"),
                 new SimvarRequest("AIRSPEED INDICATED", "IAS", "Knots"),
                 new SimvarRequest("GPS FLIGHTPLAN TOTAL DISTANCE", "totalDistance", "Meters"),
-                new SimvarRequest("GPS ETE", "ETE", "Seconds")
+                new SimvarRequest("GPS ETE", "ETE", "Seconds"),
+                new SimvarRequest("PRESSURE ALTITUDE", "Altitude", "Feet")
             };
         }
 
@@ -291,7 +295,15 @@ namespace FlightMonitor
             _lastFuel = fuel;
             _lastTime = now;
 
-            Console.WriteLine("Sending result:\n" + json.ToString());
+            PostData(json.ToString());
+        }
+
+        private void PostData(string data)
+        {
+            var postData = new StringContent(data, Encoding.UTF8, "application/json");
+            const string url = "https://fm.bill.tt/";
+            HttpClient client = new HttpClient();
+            client.PostAsync(url, postData);
         }
     }
 }
