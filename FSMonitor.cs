@@ -105,7 +105,7 @@ namespace FlightMonitor
                 new SimvarRequest("AIRSPEED INDICATED", "IAS", "Knots"),
                 new SimvarRequest("GPS FLIGHTPLAN TOTAL DISTANCE", "totalDistance", "Meters"),
                 new SimvarRequest("GPS ETE", "ETE", "Seconds"),
-                new SimvarRequest("PRESSURE ALTITUDE", "Altitude", "Feet")
+                new SimvarRequest("PRESSURE ALTITUDE", "altitude", "Feet")
             };
         }
 
@@ -280,7 +280,7 @@ namespace FlightMonitor
             }
 
             // calculate remaining distance
-            double distance = json["GS"] * json["ETE"] / 3600;
+            double distance = json["GS"] * json["ETE"] / 3600.0;
             json["distance"] = distance;
 
             // calculate fuel per hour

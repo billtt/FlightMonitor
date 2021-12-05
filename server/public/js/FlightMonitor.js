@@ -61,7 +61,13 @@ function updateAll() {
     update('valDistPercent', percent);
     let ete = _data.ETE;
     update('valETE', getDisplayTimeSpan(ete));
-    update('valETA', moment().add(ete, 's').format('MM/DD HH:mm'));
+    update('valETA', moment().add(ete - seconds, 's').format('MM/DD HH:mm'));
+
+    // calculate descent information
+    let angle = Math.atan2(_data.altitude / 6076.12, _data.distance) * 180 / Math.PI;
+    let desV = Math.round(_data.altitude / ete * 60);
+    update('valDesAngle', angle);
+    update('valDesVelocity', desV);
 }
 
 setInterval(getStatus, 3000);
