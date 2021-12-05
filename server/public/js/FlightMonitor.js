@@ -25,7 +25,7 @@ function update(prop, value) {
 
 function updateTimeColor(seconds) {
     let color = 'red';
-    if (seconds < 6) {
+    if (seconds < 10) {
         color = 'green';
     } else if (seconds < 30) {
         color = 'orange';
@@ -61,7 +61,7 @@ function updateAll() {
     update('valDistPercent', percent);
     let ete = _data.ETE;
     update('valETE', getDisplayTimeSpan(ete));
-    update('valETA', moment().add(_data.ete, 's').format('MM/DD HH:mm'));
+    update('valETA', moment().add(ete, 's').format('MM/DD HH:mm'));
 }
 
 setInterval(getStatus, 3000);
