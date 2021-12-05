@@ -15,10 +15,20 @@
 
 <body>
 
-<h3>Flight Status</h3>
-<div id="status"></div>
+<h3>Flight Status <span style="font-size: 0.6em;" id="valUpdateTime"></span></h3>
+<div id="status">
+    <p><b>GS</b>: <span id="valGS"></span> Knots / <b>TAS</b>: <span id="valTAS"></span> Knots</p>
+    <p>
+        <b>Fuel</b>: <span id="valFuel"></span> kg
+        / <span id="valFuelRate"></span> kg/h
+        / <span id="valFuelTime"></span>h
+    </p>
+    <p><b>Distance</b>: <span id="valDistance"></span>nm (<span id="valDistPercent"></span>%)</p>
+    <p><b>ETA</b>: <span id="valETA"></span> (<span id="valETE"></span>)</p>
+</div>
 
 <script src="js/jquery-3.6.0.min.js"></script>
+<script src="js/moment.js"></script>
 <script src="js/FlightMonitor.js"></script>
 </body>
 </html>

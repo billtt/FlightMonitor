@@ -2,25 +2,66 @@
  * Created by billtt on 2021/11/30.
  */
 
+let _data = null;
+
 function getStatus() {
     $.getJSON('/status', (data) => {
-        showData(data);
+        if (data && data.timestamp) {
+            if (_data == null) {
+                setInterval(updateAll, 1000);
+            }
+            _data = data;
+            updateAll();
+        }
     });
 }
 
-function showData(data) {
-    let html = '';
-    let timestamp = new Date(data.timestamp);
+function update(prop, value) {
+    if ($.isNumeric(value)) {
+        value = value.toFixed(1);
+    }
+    $('#' + prop).text(value);
+}
+
+function updateTimeColor(seconds) {
+    let color = 'red';
+    if (seconds < 6) {
+        color = 'green';
+    } else if (seconds < 30) {
+        color = 'orange';
+    }
+    $('#valUpdateTime').css('color', color);
+}
+
+function getDisplayTimeSpan(seconds) {
+    let hours = Math.floor(seconds / 3600);
+    let mins = seconds / 60 % 60;
+    let dispSpan = '';
+    if (hours > 0) {
+        dispSpan = hours + 'h';
+    }
+    if (hours === 0 || mins > 0) {
+        dispSpan += (hours > 0 ? ' ' : '') + mins.toFixed(0) + 'm';
+    }
+    return dispSpan;
+}
+
+function updateAll() {
+    let timestamp = new Date(_data.timestamp);
     let seconds = ((Date.now() - timestamp.getTime()) / 1000).toFixed(0);
-    html += `<p><b>Updated</b>: ${seconds}s (${data.timestamp})</p>`;
-    html += `<p><b>GS</b>: ${data.GS.toFixed(1)} Knots / <b>TAS</b>: ${data.TAS.toFixed(1)} Knots</p>`;
-
-    html += `<p><b>Fuel</b>: ${(0.453592 * data.fuelWeight).toFixed(1)} kg / <b>Consumption</b>: ${(data.fuelPerHour * 0.453592).toFixed(1)} kg/h</p>`;
-
-    let percent = 100 - (data.distance / data.totalDistance * 1852 * 100).toFixed(1);
-    html += `<p><b>Distance</b>: ${data.distance} nm (${percent}%)</p>`;
-
-    $('#status').html(html);
+    updateTimeColor(seconds);
+    update('valUpdateTime', `${_data.timestamp} (${seconds}s)`);
+    update('valGS', _data.GS);
+    update('valTAS', _data.TAS);
+    update('valFuel', _data.fuelWeight * 0.453592);
+    update('valFuelRate', _data.fuelPerHour * 0.453592);
+    update('valFuelTime', _data.fuelWeight / _data.fuelPerHour);
+    update('valDistance', _data.distance);
+    let percent = 100 - (_data.distance / _data.totalDistance * 1852 * 100);
+    update('valDistPercent', percent);
+    let ete = _data.ETE;
+    update('valETE', getDisplayTimeSpan(ete));
+    update('valETA', moment().add(_data.ete, 's').format('MM/DD HH:mm'));
 }
 
 setInterval(getStatus, 3000);
