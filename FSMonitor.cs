@@ -109,23 +109,28 @@ namespace FlightMonitor
             };
         }
 
-        private bool Connect()
+        private void Connect()
         {
-            Console.WriteLine("Connecting to Flight Simulator...");
-            try
+            while (_simConnect == null)
             {
-                _simConnect = new SimConnect("FSMonitor", IntPtr.Zero, WM_USER_SIMCONNECT, null, 0);
-                _simConnect.OnRecvOpen += new SimConnect.RecvOpenEventHandler(OnRecvOpen);
-                _simConnect.OnRecvQuit += new SimConnect.RecvQuitEventHandler(OnRecvQuit);
-                _simConnect.OnRecvException += new SimConnect.RecvExceptionEventHandler(OnRecvException);
-                _simConnect.OnRecvSimobjectDataBytype += new SimConnect.RecvSimobjectDataBytypeEventHandler(OnRecvSimobjectDataBytype);
+                try
+                {
+                    _simConnect = new SimConnect("FSMonitor", IntPtr.Zero, WM_USER_SIMCONNECT, null, 0);
+                    _simConnect.OnRecvOpen += new SimConnect.RecvOpenEventHandler(OnRecvOpen);
+                    _simConnect.OnRecvQuit += new SimConnect.RecvQuitEventHandler(OnRecvQuit);
+                    _simConnect.OnRecvException += new SimConnect.RecvExceptionEventHandler(OnRecvException);
+                    _simConnect.OnRecvSimobjectDataBytype += new SimConnect.RecvSimobjectDataBytypeEventHandler(OnRecvSimobjectDataBytype);
+                }
+                catch (COMException e)
+                {
+                    if (_simConnect != null)
+                    {
+                        _simConnect.Dispose();
+                        _simConnect = null;
+                    }
+                }
+                Thread.Sleep(60 * 1000);
             }
-            catch (COMException e)
-            {
-                Console.WriteLine("Error:\n" + e.Message);
-                return false;
-            }
-            return true;
         }
 
         private void Disconnect()
@@ -193,10 +198,13 @@ namespace FlightMonitor
         /// The case where the user closes game
         private void OnRecvQuit(SimConnect sender, SIMCONNECT_RECV data)
         {
-            Console.WriteLine("SimConnect_OnRecvQuit");
-            Console.WriteLine("KH has exited");
+            Console.WriteLine("Simulator quit.");
 
             Disconnect();
+
+            // retry connecting
+            Thread.Sleep(60 * 1000);
+            Connect();
         }
 
         private void OnRecvException(SimConnect sender, SIMCONNECT_RECV_EXCEPTION data)
