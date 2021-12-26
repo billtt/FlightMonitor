@@ -35,6 +35,13 @@
             font-size: 80%;
             color: #343a40;
         }
+
+        .title {
+            margin-top: 15px;
+            font-weight: bold;
+            background-color: #f0f0f0;
+            padding: 5px 0px;
+        }
     </style>
 
 </head>
@@ -67,7 +74,7 @@
                             </span>
                         </p>
                         <ul class="list-unstyled mt-3 mb-4">
-                            <li><b>Destination</b></li>
+                            <li class="title">Destination</li>
                             <li style="font-size: 1.6em;">
                                 <b><span id="valDistance">0.0</span> <span class="subscript">nm</span></b>
                                 <span class="metric">
@@ -75,12 +82,12 @@
                                 </span>
                             </li>
                             <li><span id="valETA">01/01 00:00</span> (<span id="valETE">0m</span>)</li>
-                            <li><br/><b>Altitude</b></li>
+                            <li class="title">Altitude</li>
                             <li style="font-size: 1.6em;">
                                 <b><span id="valAltitude">0.0</span> <span class="subscript">ft</span></b>
                                 <span class="metric">(<span id="valAltitudeM">0.0</span> <span class="subscript">m</span>)</span>
                             </li>
-                            <li><br/><b>Speed</b></li>
+                            <li class="title">Speed</li>
                             <li style="font-size: 1.6em;">
                                 <b><span id="valGS">0.0</span> <span class="subscript">Knots</span></b>
                                 <span class="metric">
@@ -91,13 +98,13 @@
                                 <span class="badge bg-secondary">TAS</span>
                                 <span id="valTAS">0.0</span> <span class="subscript">Knots</span>
                             </li>
-                            <li><br/><b>Fuel</b></li>
+                            <li class="title">Fuel</li>
                             <li>
                                 <span id="valFuel">0.0</span> kg <br/>
                                 <span id="valFuelRate">0.0</span> kg/h
                                 (<span id="valFuelTime">0.0</span>h)
                             </li>
-                            <li><br/><b>Descent Ref</b></li>
+                            <li class="title">Descent Ref</li>
                             <li>
                                 <span id="valDesAngle">0.0</span>°<br/>
                                 <span id="valDesVelocity">0.0</span> ft/min
