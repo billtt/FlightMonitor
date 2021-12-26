@@ -25,6 +25,16 @@
         .card-body {
             min-height: 350px;
         }
+
+        .subscript {
+            font-size: 40%;
+            color: gray;
+        }
+
+        .metric {
+            font-size: 80%;
+            color: #343a40;
+        }
     </style>
 
 </head>
@@ -33,64 +43,53 @@
 
 <div class="container">
 
-    <div class="p-3 pb-md-4 mx-auto text-center">
-        <h3 class="display-5 fw-normal">Flight Status</h3>
-        <p class="fs-5"><span id="valUpdateTime">-</span></p>
-    </div>
-
     <main>
-        <div class="row row-cols-1 row-cols-md-2 mb-3 text-center">
+        <div class="row row-cols-1 row-cols-md-1 mb-3 text-center">
             <div class="col">
                 <div class="card mb-4 rounded-3 shadow-sm">
                     <div class="card-header py-3">
-                        <h4 class="my-0 fw-normal">Flight</h4>
+                        <h4 class="my-0 fw-normal">Flight Status</h4>
+                        <span id="valUpdateTime">-</span>
                     </div>
                     <div class="card-body">
                         <div class="progress">
                             <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" aria-valuenow="75" aria-valuemin="0" aria-valuemax="100" style="width: 0%" id="pgbPercent">
                             </div>
                         </div>
-                        <h4 class="card-title" style="margin-top: 20px;">
-                            <span id="valCompletedDist">0.0</span> /
-                            <span id="valTotalDist">0.0</span> nm <br/>
-                            <small class="text-muted">
-                                <span id="valCompletedDistKm">0.0</span> /
-                                <span id="valTotalDistKm">0.0</span> km
-                            </small>
-                        </h4>
+                        <p style="margin-top: 10px;">
+                            <b>
+                                <span id="valCompletedDist">0.0</span> /
+                                <span id="valTotalDist">0.0</span> <span class="subscript">nm</span>
+                            </b>
+                            <span class="metric">
+                                (<span id="valCompletedDistKm">0.0</span> /
+                                <span id="valTotalDistKm">0.0</span> <span class="subscript">km</span>)
+                            </span>
+                        </p>
                         <ul class="list-unstyled mt-3 mb-4">
-                            <li><b>Altitude</b></li>
-                            <li>
-                                <span id="valAltitude">0.0</span> ft
-                                <small class="text-muted">(<span id="valAltitudeM">0.0</span> m)</small>
-                            </li>
-                            <li><br/><b>Destination</b></li>
-                            <li>
-                                <span id="valDistance">0.0</span> nm
-                                <small class="text-muted">(<span id="valDistanceKm">0.0</span> km)</small>
+                            <li><b>Destination</b></li>
+                            <li style="font-size: 1.6em;">
+                                <b><span id="valDistance">0.0</span> <span class="subscript">nm</span></b>
+                                <span class="metric">
+                                    (<span id="valDistanceKm">0.0</span> <span class="subscript">km</span>)
+                                </span>
                             </li>
                             <li><span id="valETA">01/01 00:00</span> (<span id="valETE">0m</span>)</li>
-                        </ul>
-                    </div>
-                </div>
-            </div>
-
-            <div class="col">
-                <div class="card mb-4 rounded-3 shadow-sm">
-                    <div class="card-header py-3">
-                        <h4 class="my-0 fw-normal">Performance</h4>
-                    </div>
-                    <div class="card-body">
-                        <h4 class="card-title">
-                            <span id="valGS">0.0</span> Knots<br/>
-                            <small class="text-muted">
-                                <span id="valGSKm">0.0</span> km/h
-                            </small>
-                        </h4>
-                        <ul class="list-unstyled mt-3 mb-4">
+                            <li><br/><b>Altitude</b></li>
+                            <li style="font-size: 1.6em;">
+                                <b><span id="valAltitude">0.0</span> <span class="subscript">ft</span></b>
+                                <span class="metric">(<span id="valAltitudeM">0.0</span> <span class="subscript">m</span>)</span>
+                            </li>
+                            <li><br/><b>Speed</b></li>
+                            <li style="font-size: 1.6em;">
+                                <b><span id="valGS">0.0</span> <span class="subscript">Knots</span></b>
+                                <span class="metric">
+                                    (<span id="valGSKm">0.0</span> <span class="subscript">km/h</span>)
+                                </span>
+                            </li>
                             <li>
                                 <span class="badge bg-secondary">TAS</span>
-                                <span id="valTAS">0.0</span> Knots
+                                <span id="valTAS">0.0</span> <span class="subscript">Knots</span>
                             </li>
                             <li><br/><b>Fuel</b></li>
                             <li>
