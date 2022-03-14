@@ -105,7 +105,11 @@ namespace FlightMonitor
                 new SimvarRequest("AIRSPEED INDICATED", "IAS", "Knots"),
                 new SimvarRequest("GPS FLIGHTPLAN TOTAL DISTANCE", "totalDistance", "Meters"),
                 new SimvarRequest("GPS ETE", "ETE", "Seconds"),
-                new SimvarRequest("PRESSURE ALTITUDE", "altitude", "Feet")
+                new SimvarRequest("PRESSURE ALTITUDE", "altitude", "Feet"),
+                new SimvarRequest("PLANE LATITUDE", "latitude", "Degrees"),
+                new SimvarRequest("PLANE LONGITUDE", "longitude", "Degrees"),
+                new SimvarRequest("PLANE HEADING DEGREES MAGNETIC", "headingMagnetic", "Degrees"),
+                new SimvarRequest("PLANE HEADING DEGREES TRUE", "headingTrue", "Degrees")
             };
         }
 
