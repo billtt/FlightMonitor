@@ -3,6 +3,8 @@ const bodyParser = require('body-parser');
 const path = require('path');
 const app = express();
 
+const config = require('config');
+
 var status = {};
 
 app.set('views', __dirname + '/views');
@@ -16,6 +18,7 @@ app.post('/', (req, res) => {
 });
 
 app.get('/', (req, res) => {
+    res.locals.ak = config.get('ak');
     res.render('index');
 });
 

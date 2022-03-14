@@ -3,6 +3,9 @@
  */
 
 let _data = null;
+let _map = null;
+let _plane = null;
+let _lastDrag = 0;
 const NM2KM = 1.852;
 const FT2M = 0.3048;
 
@@ -87,6 +90,35 @@ function updateAll() {
     let desV = Math.round(_data.altitude / ete * 60);
     update('valDesAngle', angle);
     update('valDesVelocity', desV);
+
+    // update map
+    updatePosition(_data.longitude, _data.latitude, _data.headingMagetic);
+}
+
+// map
+function initMap() {
+    var startPoint = new BMap.Point(121.805278, 31.143333);
+    _map = new BMap.Map("map");
+    _map.enableScrollWheelZoom();
+    _map.centerAndZoom(startPoint, 8);
+    _map.addEventListener('dragend', onMapDragged);
+
+    var icon = new BMap.Icon('img/plane.png', new BMap.Size(40, 40), {anchor: new BMap.Size(20, 20)});
+    _plane = new BMap.Marker(startPoint, {icon: icon});
+    _map.addOverlay(_plane);
+}
+
+function updatePosition(longitude, latitude, heading) {
+    let pos = new BMap.Point(longitude, latitude);
+    _plane.setPosition(pos);
+    _plane.setRotation(heading);
+    if (Date.now() - _lastDrag > 10000) { // 10s after dragging the map
+        _map.setCenter(pos);
+    }
+}
+
+function onMapDragged() {
+    _lastDrag = Date.now();
 }
 
 setInterval(getStatus, 3000);
