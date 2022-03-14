@@ -5,7 +5,6 @@
 let _data = null;
 let _map = null;
 let _plane = null;
-let _lastDrag = 0;
 const NM2KM = 1.852;
 const FT2M = 0.3048;
 
@@ -108,19 +107,36 @@ function initMap() {
     var icon = new BMap.Icon('img/plane.png', new BMap.Size(40, 40), {anchor: new BMap.Size(20, 20)});
     _plane = new BMap.Marker(startPoint, {icon: icon});
     _map.addOverlay(_plane);
+
+    $('#chkAutoCenter').change(() => {
+        if (isAutoCenter()) {
+            _map.panTo(_plane.getPosition());
+        }
+    });
 }
 
 function updatePosition(longitude, latitude, heading) {
     let pos = new BMap.Point(longitude, latitude);
     _plane.setPosition(pos);
     _plane.setRotation(heading);
-    if (Date.now() - _lastDrag > 10000) { // 10s after dragging the map
-        _map.setCenter(pos);
+    if (isAutoCenter()) { // 10s after dragging the map
+        _map.panTo(pos);
     }
 }
 
 function onMapDragged() {
-    _lastDrag = Date.now();
+    if (isAutoCenter()) {
+        setAutoCenter(false);
+    }
+}
+
+function isAutoCenter() {
+    return $('#chkAutoCenter').prop('checked');
+}
+
+function setAutoCenter(auto) {
+    $('#chkAutoCenter').prop('checked', auto);
+    $('#chkAutoCenter').bootstrapToggle(auto ? 'on' : 'off');
 }
 
 setInterval(getStatus, 3000);

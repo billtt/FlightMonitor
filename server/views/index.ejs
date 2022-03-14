@@ -13,7 +13,8 @@
 
     <meta name="viewport" content="initial-scale=1.0, user-scalable=no" />
 
-    <link href="/css/bootstrap.min.css" rel="stylesheet">
+    <link href="css/bootstrap.min.css" rel="stylesheet">
+    <link href="css/bootstrap4-toggle.min.css" rel="stylesheet">
 
     <style type="text/css">
         html {
@@ -36,7 +37,7 @@
         }
 
         .subscript {
-            font-size: 40%;
+            font-size: 60%;
             color: gray;
         }
 
@@ -66,6 +67,8 @@
 
     <script src="js/jquery-3.6.0.min.js"></script>
     <script src="js/moment.js"></script>
+    <script src="js/bootstrap.min.js"></script>
+    <script src="js/bootstrap4-toggle.min.js"></script>
 
 </head>
 
@@ -135,6 +138,7 @@
                                 <span id="valDesVelocity">0.0</span> ft/min
                             </li>
                         </ul>
+                        Auto Center <input type="checkbox" checked data-toggle="toggle" data-size="sm" id="chkAutoCenter"/>
                     </div>
                 </div>
             </div>
