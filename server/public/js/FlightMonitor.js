@@ -180,17 +180,21 @@ function drawFlightPlan() {
         routes[routeType].push(point);
         if (i > 0 && i < fixes.length-1) {
             if (!fix.sidStar && routeType === 0) {
-                routeType++;
-                routes[routeType].push(point);
+                routes[1].push(point);
+                routeType = 1;
             }
             if (fix.sidStar && routeType === 1) {
-                routeType++;
-                routes[routeType].push(point);
+                // remote last point from Normal route
+                routes[1].pop();
+                // add last point from Normal route
+                routes[2].push(routes[1][routes[1].length-1]);
+                routes[2].push(point);
+                routeType = 2;
             }
         }
 
-        // skip origin and destination for waypoints
-        if (i > 0 && i < fixes.length-1) {
+        // skip airports, SID and STAR for waypoints
+        if (i > 0 && i < fixes.length-1 && !fix.sidStar) {
             let name = (fix.id === fix.name ? fix.name : (`(${fix.id}) ${fix.name}`));
             let wpt = new BMap.Marker(point, {icon: wptIcon, title: name});
             _map.addOverlay(wpt);
@@ -198,9 +202,9 @@ function drawFlightPlan() {
     }
     // draw routes
     const options = [
-        {color: 'green', style: 'dashed'}, // SID
-        {color: 'blue', style: 'solid'}, // Normal
-        {color: 'green', style: 'dashed'} // STAR
+        {color: 'orange', style: 'dashed'}, // SID
+        {color: 'red', style: 'solid'}, // Normal
+        {color: 'orange', style: 'dashed'} // STAR
     ];
     // SID route
     for (let i=0; i<3; i++) {
