@@ -202,9 +202,9 @@ function drawFlightPlan() {
     }
     // draw routes
     const options = [
-        {color: 'orange', style: 'dashed'}, // SID
-        {color: 'red', style: 'solid'}, // Normal
-        {color: 'orange', style: 'dashed'} // STAR
+        {color: 'orange', style: 'dashed', opacity: 0.5}, // SID
+        {color: 'red', style: 'solid', opacity: 0.3}, // Normal
+        {color: 'orange', style: 'dashed', opacity: 0.5} // STAR
     ];
     // SID route
     for (let i=0; i<3; i++) {
@@ -212,8 +212,8 @@ function drawFlightPlan() {
             _map.addOverlay(new BMap.Polyline(routes[i], {
                 strokeColor: options[i].color,
                 strokeStyle: options[i].style,
-                strokeWeight:8,
-                strokeOpacity:0.3
+                strokeOpacity: options[i].opacity,
+                strokeWeight: 8
             }));
         }
     }
