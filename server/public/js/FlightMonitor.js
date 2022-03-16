@@ -5,6 +5,7 @@
 let _data = null;
 let _map = null;
 let _plane = null;
+let _plan = null;
 const NM2KM = 1.852;
 const FT2M = 0.3048;
 
@@ -97,7 +98,7 @@ function updateAll(dataChanged) {
 }
 
 // map
-function initMap() {
+function init() {
     var startPoint = new BMap.Point(121.805278, 31.143333);
     _map = new BMap.Map("map");
     _map.enableScrollWheelZoom();
@@ -105,12 +106,22 @@ function initMap() {
     _map.addEventListener('dragend', onMapDragged);
 
     var icon = new BMap.Icon('img/plane.png', new BMap.Size(40, 40), {anchor: new BMap.Size(20, 20)});
-    _plane = new BMap.Marker(startPoint, {icon: icon});
+    _plane = new BMap.Marker(startPoint, {icon: icon, enableMassClear: false});
+    _plane.setTop(true);
     _map.addOverlay(_plane);
 
     $('#chkAutoCenter').change(() => {
         if (isAutoCenter()) {
             _map.panTo(_plane.getPosition());
+        }
+    });
+
+    const btPlan = $('#btPlan');
+    $('#btPlan').click(() => {
+        if (btPlan.text() === 'Load') {
+            loadPlan();
+        } else if (btPlan.text() === 'Unload') {
+            unloadPlan();
         }
     });
 }
@@ -137,6 +148,78 @@ function isAutoCenter() {
 function setAutoCenter(auto) {
     $('#chkAutoCenter').prop('checked', auto);
     $('#chkAutoCenter').bootstrapToggle(auto ? 'on' : 'off');
+}
+
+function loadPlan() {
+    const btPlan = $('#btPlan');
+    btPlan.prop('disabled', true);
+    btPlan.text('Loading...');
+    $.getJSON('/plan', (data) => {
+        btPlan.prop('disabled', false);
+        if (!data || data.code !== 0) {
+            alert('Error loading plan!');
+            btPlan.text('Load');
+            return;
+        }
+        _plan = data;
+        drawFlightPlan();
+        btPlan.text('Unload');
+    });
+}
+
+function drawFlightPlan() {
+    const fixes = _plan.fixes;
+    let routeType = 0; // 0 - sid, 1 - normal, 2 - star
+    let routes = [[], [], []];
+    const wptIcon = new BMap.Icon('img/wpt.png', new BMap.Size(20, 20), {anchor: new BMap.Size(10, 10)});
+    for (let i=0; i<fixes.length; i++) {
+        let fix = fixes[i];
+        let point = new BMap.Point(fix.long, fix.lat);
+
+        // add points to routes
+        routes[routeType].push(point);
+        if (i > 0 && i < fixes.length-1) {
+            if (!fix.sidStar && routeType === 0) {
+                routeType++;
+                routes[routeType].push(point);
+            }
+            if (fix.sidStar && routeType === 1) {
+                routeType++;
+                routes[routeType].push(point);
+            }
+        }
+
+        // skip origin and destination for waypoints
+        if (i > 0 && i < fixes.length-1) {
+            let name = (fix.id === fix.name ? fix.name : (`(${fix.id}) ${fix.name}`));
+            let wpt = new BMap.Marker(point, {icon: wptIcon, title: name});
+            _map.addOverlay(wpt);
+        }
+    }
+    // draw routes
+    const options = [
+        {color: 'green', style: 'dashed'}, // SID
+        {color: 'blue', style: 'solid'}, // Normal
+        {color: 'green', style: 'dashed'} // STAR
+    ];
+    // SID route
+    for (let i=0; i<3; i++) {
+        if (routes[i].length > 1) {
+            _map.addOverlay(new BMap.Polyline(routes[i], {
+                strokeColor: options[i].color,
+                strokeStyle: options[i].style,
+                strokeWeight:8,
+                strokeOpacity:0.3
+            }));
+        }
+    }
+}
+
+function unloadPlan() {
+    _plan = null;
+    _map.clearOverlays();
+    const btPlan = $('#btPlan');
+    btPlan.text('Load');
 }
 
 setInterval(getStatus, 3000);
