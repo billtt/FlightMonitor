@@ -74,13 +74,22 @@
             font-size: 1.2em;
         }
 
-        #valIcao {
+        #valIcao, #valFlightCat {
             font-weight: bold;
+        }
+
+        #valMetarTime {
+            font-size: 0.8em;
         }
 
         .hidden {
             visibility: hidden;
         }
+
+        .LIFR { color: magenta; }
+        .IFR { color: red; }
+        .MVFR { color: blue; }
+        .VFR { color: green; }
 
     </style>
 
@@ -178,7 +187,7 @@
             <div class="col">
                 <div class="card mb-4 rounded-3 shadow-sm">
                     <div class="card-header py-3">
-                        <span id="valIcao">ZBAA</span><br/>
+                        <span id="valIcao">ZBAA</span> (<span id="valFlightCat">VFR</span>)<br/>
                         <span id="valMetarTime">-</span>
                     </div>
                     <div class="card-body">
@@ -187,6 +196,11 @@
                             <li>
                                 <span id="valElevation">0</span><sup>ft</sup> /
                                 <span id="valRunway">36L</span>
+                            </li>
+                            <li class="title">Weather / Visibility</li>
+                            <li>
+                                <span id="valWeather"></span> /
+                                <span id="valVisibility">100</span><sup>mi</sup>
                             </li>
                             <li class="title">Wind</li>
                             <li>

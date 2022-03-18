@@ -104,6 +104,7 @@ function updateAll(dataChanged) {
 
 // map
 function init() {
+    // set start point at ZSPD
     var startPoint = new BMap.Point(121.805278, 31.143333);
     _map = new BMap.Map("map");
     _map.enableScrollWheelZoom();
@@ -256,12 +257,17 @@ function loadMetar() {
 
 function updateMetar(metar) {
     $('#valMetarTime').text(moment(metar.time).format('MM/DD HH:mm'));
+    $('#valFlightCat').removeClass('IFR LIFR VFR MVFR');
+    $('#valFlightCat').text(metar.flightCat);
+    $('#valFlightCat').addClass(metar.flightCat);
+    $('#valWeather').text(metar.weather);
+    $('#valVisibility').text(metar.visibility);
     $('#valWind').text(`${metar.windDir}° ${metar.windSpeed}`);
     $('#valTemp').text(metar.temp);
     $('#valDew').text(metar.dew);
-    let inHg = parseFloat(metar.altimInhg);
-    $('#valInhg').text(inHg);
-    $('#valHpa').text(inHg * 33.86);
+    let inHg = metar.altimInhg;
+    $('#valInhg').text(inHg.toFixed(2));
+    $('#valHpa').text(Math.round(inHg * 33.86));
     $('#metar').removeClass('hidden');
 }
 
