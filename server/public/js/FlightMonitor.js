@@ -88,8 +88,12 @@ function updateAll(dataChanged) {
         update('valETA', moment().add(ete - seconds, 's').format('MM/DD HH:mm'));
 
         // calculate descent information
-        let angle = Math.atan2(_data.altitude / 6076.12, _data.distance) * 180 / Math.PI;
-        let desV = Math.round(_data.altitude / ete * 60);
+        let altitude = _data.altitude;
+        if (_plan) {
+            altitude -= _plan.destination.elevation;
+        }
+        let angle = Math.atan2(altitude / 6076.12, _data.distance) * 180 / Math.PI;
+        let desV = Math.round(altitude / ete * 60);
         update('valDesAngle', angle);
         update('valDesVelocity', desV);
 
