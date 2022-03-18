@@ -27,17 +27,8 @@
             paddng: 0;
         }
 
-        .container {
-            max-width: 360px;
-            /*opacity: 0.7;*/
-        }
-
-        .card-body {
-            min-height: 200px;
-        }
-
-        .subscript {
-            font-size: 60%;
+        sup {
+            font-weight: bold;
             color: gray;
         }
 
@@ -48,6 +39,7 @@
 
         .title {
             margin-top: 15px;
+            font-size: 0.9em;
             font-weight: bold;
             background-color: #f0f0f0;
             padding: 5px 0px;
@@ -58,11 +50,38 @@
         }
 
         #status {
+            max-width: 300px;
             position: absolute;
             z-index: 1;
             left: 0px;
             top: 10px;
         }
+
+        #metar {
+            font-size: 0.9em;
+            max-width: 210px;
+            position: absolute;
+            z-index: 1;
+            right: 0px;
+            top: 10px;
+        }
+
+        #metar .card-body {
+            padding: 0px 15px;
+        }
+
+        #metar .card-header {
+            font-size: 1.2em;
+        }
+
+        #valIcao {
+            font-weight: bold;
+        }
+
+        .hidden {
+            visibility: hidden;
+        }
+
     </style>
 
     <script src="js/jquery-3.6.0.min.js"></script>
@@ -77,13 +96,11 @@
 <div id="map"></div>
 
 <div class="container" id="status">
-
     <main>
         <div class="row row-cols-1 row-cols-md-1 mb-3 text-center">
             <div class="col">
                 <div class="card mb-4 rounded-3 shadow-sm">
                     <div class="card-header py-3">
-                        <h4 class="my-0 fw-normal">Flight Status</h4>
                         <span id="valUpdateTime">-</span>
                     </div>
                     <div class="card-body">
@@ -94,48 +111,51 @@
                         <p style="margin-top: 10px;">
                             <b>
                                 <span id="valCompletedDist">0.0</span> /
-                                <span id="valTotalDist">0.0</span> <span class="subscript">nm</span>
-                            </b>
+                                <span id="valTotalDist">0.0</span> <sup>nm</sup>
+                            </b><br/>
                             <span class="metric">
                                 (<span id="valCompletedDistKm">0.0</span> /
-                                <span id="valTotalDistKm">0.0</span> <span class="subscript">km</span>)
+                                <span id="valTotalDistKm">0.0</span> <sup>km</sup>)
                             </span>
                         </p>
                         <ul class="list-unstyled mt-3 mb-4">
                             <li class="title">Destination</li>
                             <li style="font-size: 1.2em;">
-                                <b><span id="valDistance">0.0</span> <span class="subscript">nm</span></b>
+                                <b><span id="valDistance">0.0</span> <sup>nm</sup></b>
                                 <span class="metric">
-                                    (<span id="valDistanceKm">0.0</span> <span class="subscript">km</span>)
+                                    (<span id="valDistanceKm">0.0</span> <sup>km</sup>)
                                 </span>
                             </li>
-                            <li><span id="valETA">01/01 00:00</span> (<span id="valETE">0m</span>)</li>
+                            <li>
+                                <span id="valETE">0</span><sup>min</sup>
+                                (<span id="valETA">01/01 00:00</span>)
+                            </li>
                             <li class="title">Altitude</li>
                             <li style="font-size: 1.2em;">
-                                <b><span id="valAltitude">0.0</span> <span class="subscript">ft</span></b>
-                                <span class="metric">(<span id="valAltitudeM">0.0</span> <span class="subscript">m</span>)</span>
+                                <b><span id="valAltitude">0.0</span> <sup>ft</sup></b>
+                                <span class="metric">(<span id="valAltitudeM">0.0</span> <sup>m</sup>)</span>
                             </li>
                             <li class="title">Speed</li>
                             <li style="font-size: 1.2em;">
-                                <b><span id="valGS">0.0</span> <span class="subscript">Knots</span></b>
+                                <b><span id="valGS">0.0</span> <sup>kts</sup></b>
                                 <span class="metric">
-                                    (<span id="valGSKm">0.0</span> <span class="subscript">km/h</span>)
+                                    (<span id="valGSKm">0.0</span> <sup>km/h</sup>)
                                 </span>
                             </li>
                             <li>
                                 <span class="badge bg-secondary">TAS</span>
-                                <span id="valTAS">0.0</span> <span class="subscript">Knots</span>
+                                <span id="valTAS">0.0</span> <sup>kts</sup>
                             </li>
                             <li class="title">Fuel</li>
                             <li>
-                                <span id="valFuel">0.0</span> kg <br/>
-                                <span id="valFuelRate">0.0</span> kg/h
-                                (<span id="valFuelTime">0.0</span>h)
+                                <span id="valFuel">0.0</span><sup>kg</sup><br/>
+                                <span id="valFuelRate">0.0</span><sup>kg/h</sup>
+                                (<span id="valFuelTime">0.0</span><sup>h</sup>)
                             </li>
                             <li class="title">Descent Ref</li>
                             <li>
-                                <span id="valDesAngle">0.0</span>°<br/>
-                                <span id="valDesVelocity">0.0</span> ft/min
+                                <span id="valDesAngle">0.0</span>° &nbsp;&nbsp;
+                                <span id="valDesVelocity">0.0</span><sup>ft/min</sup>
                             </li>
                         </ul>
                         <div style="float:left; font-size: 0.9em; width: 100px;">
@@ -150,8 +170,46 @@
 
         </div>
     </main>
-
 </div>
+
+<div class="container hidden" id="metar">
+    <main>
+        <div class="row row-cols-1 row-cols-md-1 mb-3 text-center">
+            <div class="col">
+                <div class="card mb-4 rounded-3 shadow-sm">
+                    <div class="card-header py-3">
+                        <span id="valIcao">ZBAA</span><br/>
+                        <span id="valMetarTime">-</span>
+                    </div>
+                    <div class="card-body">
+                        <ul class="list-unstyled mt-3 mb-4">
+                            <li class="title">Elevation / Runway</li>
+                            <li>
+                                <span id="valElevation">0</span><sup>ft</sup> /
+                                <span id="valRunway">36L</span>
+                            </li>
+                            <li class="title">Wind</li>
+                            <li>
+                                <span id="valWind">0° 0</span><sup>kts</sup>
+                            </li>
+                            <li class="title">Temperature (Dew)</li>
+                            <li>
+                                <span id="valTemp">15</span><sup>°C</sup>
+                                (<span id="valDew">12</span><sup>°C</sup>)
+                            </li>
+                            <li class="title">Altimeter</li>
+                            <li>
+                                <span id="valInhg">29.92</span><sup>inHg</sup>
+                                <span id="valHpa">1008</span><sup>hPa</sup>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+</div>
+
 </body>
 
 <script src="js/FlightMonitor.js"></script>

@@ -8,6 +8,7 @@ const axios = require('axios').default;
 const xml2js = require('xml2js');
 
 var status = {};
+const metarCache = {};
 
 app.set('views', __dirname + '/views');
 app.set('view engine', 'ejs');
@@ -48,9 +49,43 @@ app.get('/plan', (req, res) => {
         });
 });
 
+app.get('/metar', (req, res) => {
+    let icao = req.query.icao;
+    if (!icao || icao.length!==4) {
+        return res.json({code: 1, err: 'Invalid ICAO code'});
+    }
+    icao = icao.toUpperCase();
+    let cache = metarCache[icao];
+    if (cache && (Date.now() - cache.queryTime.getTime() <= 600 * 1000)) {
+        return res.json(cache);
+    }
+    axios.get(`https://www.aviationweather.gov/adds/dataserver_current/httpparam?dataSource=metars&requestType=retrieve&format=xml&hoursBeforeNow=3&mostRecent=true&stationString=${icao}`)
+        .then((resp) => {
+            if (resp.status === 200 && resp.data.startsWith('<?xml')) {
+                xml2js.parseString(resp.data, (err, json) => {
+                    if (err) {
+                        return res.json({code: 3, err: err.toString()});
+                    }
+                    if (!json.response || !json.response.data || !json.response.data[0].METAR) {
+                        return res.json({code: 3, err: 'Invalid response from METAR service'});
+                    }
+                    let metar = getMetar(json);
+                    metarCache[icao] = metar;
+                    return res.json(metar);
+                });
+            } else {
+                return res.json({code: 2});
+            }
+        })
+        .catch((err) => {
+            console.log(err);
+            res.json({code: 4, err: err.toString()});
+        });
+});
+
 function getFlightPlan(raw) {
-    function getNumber(obj, name) {
-        return parseFloat(obj[name][0]);
+    function parseF(numObj) {
+        return parseFloat(numObj[0]);
     }
 
     raw = raw.OFP;
@@ -63,18 +98,18 @@ function getFlightPlan(raw) {
         origin: {
             icaoCode: origin.icao_code[0],
             iataCode: origin.iata_code[0],
-            elevation: getNumber(origin, 'elevation'),
-            lat: getNumber(origin, 'pos_lat'),
-            long: getNumber(origin, 'pos_long'),
+            elevation: parseF(origin.elevation),
+            lat: parseF(origin.pos_lat),
+            long: parseF(origin.pos_long),
             name: origin.name[0],
             runway: origin.plan_rwy[0]
         },
         destination: {
             icaoCode: destination.icao_code[0],
             iataCode: destination.iata_code[0],
-            elevation: getNumber(destination, 'elevation'),
-            lat: getNumber(destination, 'pos_lat'),
-            long: getNumber(destination, 'pos_long'),
+            elevation: parseF(destination.elevation),
+            lat: parseF(destination.pos_lat),
+            long: parseF(destination.pos_long),
             name: destination.name[0],
             runway: destination.plan_rwy[0]
         },
@@ -92,8 +127,8 @@ function getFlightPlan(raw) {
             continue;
         }
         fixes.push({
-            lat: getNumber(fix, 'pos_lat'),
-            long: getNumber(fix, 'pos_long'),
+            lat: parseF(fix.pos_lat),
+            long: parseF(fix.pos_long),
             id: fix.ident[0],
             name: fix.name[0],
             sidStar: fix.is_sid_star[0] === '1'
@@ -106,6 +141,27 @@ function getFlightPlan(raw) {
         name: plan.destination.name
     });
     return plan;
+}
+
+function getMetar(raw) {
+    function parseF(numObj) {
+        return parseFloat(numObj[0]);
+    }
+    raw = raw.response.data[0].METAR[0];
+    let metar = {
+        code: 0,
+        queryTime: new Date(),
+        icao: raw.station_id[0],
+        time: raw.observation_time[0],
+        temp: parseF(raw.temp_c),
+        dew: parseF(raw.dewpoint_c),
+        windDir: parseF(raw.wind_dir_degrees),
+        windSpeed: parseF(raw.wind_speed_kt),
+        visibility: parseF(raw.visibility_statute_mi),
+        altimInhg: parseF(raw.altim_in_hg),
+        flightCat: raw.flight_category[0]
+    };
+    return metar;
 }
 
 function start() {

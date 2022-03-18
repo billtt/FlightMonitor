@@ -6,6 +6,7 @@ let _data = null;
 let _map = null;
 let _plane = null;
 let _plan = null;
+let _metarInterval = null;
 const NM2KM = 1.852;
 const FT2M = 0.3048;
 
@@ -164,6 +165,9 @@ function loadPlan() {
         _plan = data;
         drawFlightPlan();
         btPlan.text('Unload');
+
+        _metarInterval = setInterval(loadMetar, 60 * 1000);
+        loadMetar();
     });
 }
 
@@ -224,6 +228,45 @@ function unloadPlan() {
     _map.clearOverlays();
     const btPlan = $('#btPlan');
     btPlan.text('Load');
+
+    closeMetar();
+}
+
+function loadMetar() {
+    if (!_plan) {
+        closeMetar();
+        return;
+    }
+    let end = _plan[_data.GS>=50 ? 'destination' : 'origin'];
+    let icao = end.icaoCode;
+    $('#valIcao').text(icao);
+    $('#valRunway').text(end.runway);
+    $('#valElevation').text(end.elevation);
+    $.getJSON(`/metar?icao=${icao}`, (data) => {
+        if (!data || data.code !== 0) {
+            return;
+        }
+        updateMetar(data);
+    });
+}
+
+function updateMetar(metar) {
+    $('#valMetarTime').text(moment(metar.time).format('MM/DD HH:mm'));
+    $('#valWind').text(`${metar.windDir}° ${metar.windSpeed}`);
+    $('#valTemp').text(metar.temp);
+    $('#valDew').text(metar.dew);
+    let inHg = parseFloat(metar.altimInhg);
+    $('#valInhg').text(inHg);
+    $('#valHpa').text(inHg * 33.86);
+    $('#metar').removeClass('hidden');
+}
+
+function closeMetar() {
+    if (_metarInterval) {
+        clearInterval(_metarInterval);
+        _metarInterval = null;
+    }
+    $('#metar').addClass('hidden');
 }
 
 setInterval(getStatus, 3000);
