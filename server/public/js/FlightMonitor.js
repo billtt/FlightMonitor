@@ -16,6 +16,11 @@ function getStatus() {
             if (_status == null) {
                 setInterval(updateStatus, 1000);
             }
+            // If not in simulation, keep plane at previous position
+            if (data.TAS === 0) {
+                data.latitude = _plane.getPosition().lat;
+                data.longitude = _plane.getPosition().lng;
+            }
             _status = data;
             updateStatus(true);
         }
