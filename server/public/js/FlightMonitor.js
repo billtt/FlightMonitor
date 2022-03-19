@@ -14,10 +14,10 @@ function getStatus() {
     $.getJSON('/status', (data) => {
         if (data && data.timestamp) {
             if (_data == null) {
-                setInterval(updateAll, 1000);
+                setInterval(updateStatus, 1000);
             }
             _data = data;
-            updateAll(true);
+            updateStatus(true);
         }
     });
 }
@@ -52,7 +52,7 @@ function getDisplayTimeSpan(seconds) {
     return dispSpan;
 }
 
-function updateAll(dataChanged) {
+function updateStatus(dataChanged) {
     let timestamp = new Date(_data.timestamp);
     let seconds = ((Date.now() - timestamp.getTime()) / 1000).toFixed(0);
     updateTimeColor(seconds);
