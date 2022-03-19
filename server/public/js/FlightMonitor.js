@@ -105,13 +105,16 @@ function updateStatus(dataChanged) {
 // map
 function init() {
     // set start point at ZSPD
-    var startPoint = new BMap.Point(121.805278, 31.143333);
+    let startPoint = new BMap.Point(121.805278, 31.143333);
     _map = new BMap.Map("map");
     _map.enableScrollWheelZoom();
     _map.centerAndZoom(startPoint, 8);
     _map.addEventListener('dragend', onMapDragged);
 
-    var icon = new BMap.Icon('img/plane.png', new BMap.Size(40, 40), {anchor: new BMap.Size(20, 20)});
+    let nav = new BMap.NavigationControl({type: BMAP_NAVIGATION_CONTROL_ZOOM, anchor: BMAP_ANCHOR_BOTTOM_RIGHT});
+    _map.addControl(nav);
+
+    let icon = new BMap.Icon('img/plane.png', new BMap.Size(40, 40), {anchor: new BMap.Size(20, 20)});
     _plane = new BMap.Marker(startPoint, {icon: icon, enableMassClear: false});
     _plane.setTop(true);
     _map.addOverlay(_plane);

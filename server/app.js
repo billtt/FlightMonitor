@@ -7,7 +7,7 @@ const config = require('config');
 const axios = require('axios').default;
 const xml2js = require('xml2js');
 
-var status = {};
+let status = {};
 const metarCache = {};
 
 app.set('views', __dirname + '/views');
@@ -170,7 +170,7 @@ function getMetar(raw) {
 function start() {
     // check port argument
     const argv = process.argv;
-    var port = 3000;
+    let port = 3000;
     if (argv.length < 3 || isNaN(parseInt(argv[2]))) {
         console.log('Port number not specified, using default (3000).');
     } else {
