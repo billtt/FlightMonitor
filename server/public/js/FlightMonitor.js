@@ -260,8 +260,8 @@ function updateMetar(metar) {
     $('#valFlightCat').removeClass('IFR LIFR VFR MVFR');
     $('#valFlightCat').text(metar.flightCat);
     $('#valFlightCat').addClass(metar.flightCat);
-    $('#valWeather').text(metar.weather);
-    $('#valVisibility').text(metar.visibility);
+    $('#valWeather').text(metar.weather ? metar.weather : '-');
+    $('#valVisibility').text(Math.round(metar.visibilityMi * 1.609));
     $('#valWind').text(`${metar.windDir}° ${metar.windSpeed}`);
     $('#valTemp').text(metar.temp);
     $('#valDew').text(metar.dew);

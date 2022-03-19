@@ -157,11 +157,13 @@ function getMetar(raw) {
         dew: parseF(raw.dewpoint_c),
         windDir: parseF(raw.wind_dir_degrees),
         windSpeed: parseF(raw.wind_speed_kt),
-        visibility: parseF(raw.visibility_statute_mi),
+        visibilityMi: parseF(raw.visibility_statute_mi),
         altimInhg: parseF(raw.altim_in_hg),
-        flightCat: raw.flight_category[0],
-        weather: raw.wx_string[0]
+        flightCat: raw.flight_category[0]
     };
+    if (raw.wx_string) {
+        metar.weather = raw.wx_string[0];
+    }
     return metar;
 }
 
