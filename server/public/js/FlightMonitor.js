@@ -2,7 +2,7 @@
  * Created by billtt on 2021/11/30.
  */
 
-let _data = null;
+let _status = null;
 let _map = null;
 let _plane = null;
 let _plan = null;
@@ -13,10 +13,10 @@ const FT2M = 0.3048;
 function getStatus() {
     $.getJSON('/status', (data) => {
         if (data && data.timestamp) {
-            if (_data == null) {
+            if (_status == null) {
                 setInterval(updateStatus, 1000);
             }
-            _data = data;
+            _status = data;
             updateStatus(true);
         }
     });
@@ -53,23 +53,23 @@ function getDisplayTimeSpan(seconds) {
 }
 
 function updateStatus(dataChanged) {
-    let timestamp = new Date(_data.timestamp);
+    let timestamp = new Date(_status.timestamp);
     let seconds = ((Date.now() - timestamp.getTime()) / 1000).toFixed(0);
     updateTimeColor(seconds);
-    update('valUpdateTime', `${_data.timestamp} (${seconds}s)`);
+    update('valUpdateTime', `${_status.timestamp} (${seconds}s)`);
 
     if (dataChanged) {
-        update('valGS', _data.GS);
-        update('valGSKm', _data.GS * NM2KM);
-        update('valTAS', _data.TAS);
+        update('valGS', _status.GS);
+        update('valGSKm', _status.GS * NM2KM);
+        update('valTAS', _status.TAS);
 
-        update('valFuel', _data.fuelWeight * 0.453592);
-        update('valFuelRate', _data.fuelPerHour * 0.453592);
-        update('valFuelTime', _data.fuelWeight / _data.fuelPerHour);
+        update('valFuel', _status.fuelWeight * 0.453592);
+        update('valFuelRate', _status.fuelPerHour * 0.453592);
+        update('valFuelTime', _status.fuelWeight / _status.fuelPerHour);
 
-        let remainingDist = _data.distance;
+        let remainingDist = _status.distance;
         // converting from M to NM
-        let totalDist = _data.totalDistance / 1000 / NM2KM;
+        let totalDist = _status.totalDistance / 1000 / NM2KM;
         let completedDist = Math.max(0, totalDist - remainingDist);
         update('valDistance', remainingDist);
         update('valDistanceKm', remainingDist * NM2KM);
@@ -78,27 +78,27 @@ function updateStatus(dataChanged) {
         update('valCompletedDist', completedDist);
         update('valCompletedDistKm', completedDist * NM2KM);
 
-        update('valAltitude', _data.altitude);
-        update('valAltitudeM', _data.altitude * FT2M);
+        update('valAltitude', _status.altitude);
+        update('valAltitudeM', _status.altitude * FT2M);
 
-        let percent = 100 - (_data.distance / _data.totalDistance * 1852 * 100);
+        let percent = 100 - (_status.distance / _status.totalDistance * 1852 * 100);
         $('#pgbPercent').css('width', percent + '%');
-        let ete = _data.ETE;
+        let ete = _status.ETE;
         update('valETE', getDisplayTimeSpan(ete));
         update('valETA', moment().add(ete - seconds, 's').format('MM/DD HH:mm'));
 
         // calculate descent information
-        let altitude = _data.altitude;
+        let altitude = _status.altitude;
         if (_plan) {
             altitude -= _plan.destination.elevation;
         }
-        let angle = Math.atan2(altitude / 6076.12, _data.distance) * 180 / Math.PI;
+        let angle = Math.atan2(altitude / 6076.12, _status.distance) * 180 / Math.PI;
         let desV = Math.round(altitude / ete * 60);
         update('valDesAngle', angle);
         update('valDesVelocity', desV);
 
         // update map
-        updatePosition(_data.longitude, _data.latitude, _data.headingMagnetic);
+        updatePosition(_status.longitude, _status.latitude, _status.headingMagnetic);
     }
 }
 
@@ -245,7 +245,7 @@ function loadMetar() {
         closeMetar();
         return;
     }
-    let end = _plan[_data.GS>=50 ? 'destination' : 'origin'];
+    let end = _plan[(_status && _status.GS>=50) ? 'destination' : 'origin'];
     let icao = end.icaoCode;
     $('#valIcao').text(icao);
     $('#valRunway').text(end.runway);
