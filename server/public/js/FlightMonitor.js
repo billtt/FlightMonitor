@@ -91,7 +91,7 @@ function updateStatus(dataChanged) {
         update('valAltitude', _status.altitude);
         update('valAltitudeM', _status.altitude * FT2M);
 
-        let percent = 100 - (_status.distance / totalDist);
+        let percent = 100 - (_status.distance / totalDist * 100);
         $('#pgbPercent').css('width', percent + '%');
         let ete = _status.ETE;
         update('valETE', getDisplayTimeSpan(ete));
