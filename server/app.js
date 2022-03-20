@@ -124,7 +124,7 @@ function getFlightPlan(raw) {
         name: plan.origin.name
     });
     for (const fix of raw.navlog[0].fix) {
-        if (fix.type[0] !== 'wpt' && fix.type[0] !== 'vor') {
+        if (fix.type[0] !== 'wpt' && fix.type[0] !== 'vor' && fix.type[0] !== 'ndb') {
             continue;
         }
         fixes.push({
