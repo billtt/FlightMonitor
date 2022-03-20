@@ -7,6 +7,7 @@ let _map = null;
 let _plane = null;
 let _plan = null;
 let _metarInterval = null;
+let _rawConvertor = null;
 const NM2KM = 1.852;
 const FT2M = 0.3048;
 
@@ -109,6 +110,8 @@ function updateStatus(dataChanged) {
 
 // map
 function init() {
+    _rawConvertor = new BMap.Convertor();
+
     // set start point at ZSPD
     let startPoint = new BMap.Point(121.805278, 31.143333);
     _map = new BMap.Map("map");
@@ -142,11 +145,16 @@ function init() {
 
 function updatePosition(longitude, latitude, heading) {
     let pos = new BMap.Point(longitude, latitude);
-    _plane.setPosition(pos);
-    _plane.setRotation(heading);
-    if (isAutoCenter()) { // 10s after dragging the map
-        _map.panTo(pos);
-    }
+    _rawConvertor.translate([pos], 1, 5, (data) => {
+        if (data.status === 0) {
+            let tPoint = data.points[0];
+            _plane.setPosition(tPoint);
+            _plane.setRotation(heading);
+            if (isAutoCenter()) { // 10s after dragging the map
+                _map.panTo(tPoint);
+            }
+        }
+    });
 }
 
 function onMapDragged() {
@@ -189,51 +197,64 @@ function drawFlightPlan() {
     let routeType = 0; // 0 - sid, 1 - normal, 2 - star
     let routes = [[], [], []];
     const wptIcon = new BMap.Icon('img/wpt.png', new BMap.Size(20, 20), {anchor: new BMap.Size(10, 10)});
+
+    // convert coordinates
+    let points = [];
     for (let i=0; i<fixes.length; i++) {
-        let fix = fixes[i];
-        let point = new BMap.Point(fix.long, fix.lat);
-
-        // add points to routes
-        routes[routeType].push(point);
-        if (i > 0 && i < fixes.length-1) {
-            if (!fix.sidStar && routeType === 0) {
-                routes[1].push(point);
-                routeType = 1;
-            }
-            if (fix.sidStar && routeType === 1) {
-                // remote last point from Normal route
-                routes[1].pop();
-                // add last point from Normal route
-                routes[2].push(routes[1][routes[1].length-1]);
-                routes[2].push(point);
-                routeType = 2;
-            }
-        }
-
-        // skip airports, SID and STAR for waypoints
-        if (i > 0 && i < fixes.length-1 && !fix.sidStar) {
-            let name = (fix.id === fix.name ? fix.name : (`(${fix.id}) ${fix.name}`));
-            let wpt = new BMap.Marker(point, {icon: wptIcon, title: name});
-            _map.addOverlay(wpt);
-        }
+        points.push(new BMap.Point(fixes[i].long, fixes[i].lat));
     }
-    // draw routes
-    const options = [
-        {color: 'orange', style: 'dashed', opacity: 0.5}, // SID
-        {color: 'red', style: 'solid', opacity: 0.3}, // Normal
-        {color: 'orange', style: 'dashed', opacity: 0.5} // STAR
-    ];
-    // SID route
-    for (let i=0; i<3; i++) {
-        if (routes[i].length > 1) {
-            _map.addOverlay(new BMap.Polyline(routes[i], {
-                strokeColor: options[i].color,
-                strokeStyle: options[i].style,
-                strokeOpacity: options[i].opacity,
-                strokeWeight: 8
-            }));
+    new MapConvertor(_rawConvertor, points, (data) => {
+        if (data.status === 0 && data.points.length === fixes.length) {
+            for (let i=0; i<data.points.length; i++) {
+                let point = data.points[i];
+                let fix = fixes[i];
+                // add points to routes
+                routes[routeType].push(point);
+                if (i > 0 && i < fixes.length-1) {
+                    if (!fix.sidStar && routeType === 0) {
+                        routes[1].push(point);
+                        routeType = 1;
+                    }
+                    if (fix.sidStar && routeType === 1) {
+                        // remote last point from Normal route
+                        routes[1].pop();
+                        // add last point from Normal route
+                        routes[2].push(routes[1][routes[1].length-1]);
+                        routes[2].push(point);
+                        routeType = 2;
+                    }
+                }
+
+                // add markers and skip airports, SID and STAR for waypoints
+                if (i > 0 && i < fixes.length-1 && !fix.sidStar) {
+                    let name = (fix.id === fix.name ? fix.name : (`(${fix.id}) ${fix.name}`));
+                    let wpt = new BMap.Marker(point, {icon: wptIcon, title: name});
+                    _map.addOverlay(wpt);
+                }
+            }
+
+            // draw routes
+            const options = [
+                {color: 'orange', style: 'dashed', opacity: 0.5}, // SID
+                {color: 'red', style: 'solid', opacity: 0.3}, // Normal
+                {color: 'orange', style: 'dashed', opacity: 0.5} // STAR
+            ];
+            for (let i=0; i<3; i++) {
+                if (routes[i].length > 1) {
+                    _map.addOverlay(new BMap.Polyline(routes[i], {
+                        strokeColor: options[i].color,
+                        strokeStyle: options[i].style,
+                        strokeOpacity: options[i].opacity,
+                        strokeWeight: 8
+                    }));
+                }
+            }
+
+        } else {
+            alert('Error converting coordinates for plan!');
+            return;
         }
-    }
+    }).convert();
 }
 
 function unloadPlan() {
