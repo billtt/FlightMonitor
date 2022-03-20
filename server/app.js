@@ -95,6 +95,7 @@ function getFlightPlan(raw) {
         code: 0,
         airline: raw.general[0].icao_airline[0],
         flightNumber: raw.general[0].flight_number[0],
+        routeDistance: parseF(raw.general[0].route_distance),
         origin: {
             icaoCode: origin.icao_code[0],
             iataCode: origin.iata_code[0],

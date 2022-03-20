@@ -76,6 +76,10 @@ function updateStatus(dataChanged) {
         let remainingDist = _status.distance;
         // converting from M to NM
         let totalDist = _status.totalDistance / 1000 / NM2KM;
+        // use plan's route distance for total distance (more accurate)
+        if (_plan) {
+            totalDist = _plan.routeDistance;
+        }
         let completedDist = Math.max(0, totalDist - remainingDist);
         update('valDistance', remainingDist);
         update('valDistanceKm', remainingDist * NM2KM);
