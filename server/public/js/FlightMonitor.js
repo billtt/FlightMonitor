@@ -18,11 +18,10 @@ function getStatus() {
                 setInterval(updateStatus, 1000);
             }
             // If not in simulation, keep plane at previous position
-            if (data.TAS === 0 && Math.abs(data.latitude) < 1 && Math.abs(data.longitude) < 1) {
-                return;
+            if (data.TAS > 0 || Math.abs(data.latitude) > 1 || Math.abs(data.longitude) > 1) {
+                _status = data;
+                updateStatus(true);
             }
-            _status = data;
-            updateStatus(true);
         }
     });
 }
@@ -58,6 +57,9 @@ function getDisplayTimeSpan(seconds) {
 }
 
 function updateStatus(dataChanged) {
+    if (!_status) {
+        return;
+    }
     let timestamp = new Date(_status.timestamp);
     let seconds = ((Date.now() - timestamp.getTime()) / 1000).toFixed(0);
     updateTimeColor(seconds);
@@ -279,27 +281,28 @@ function loadMetar() {
     $('#valIcao').text(icao);
     $('#valRunway').text(end.runway);
     $('#valElevation').text(end.elevation);
-    $.getJSON(`/metar?icao=${icao}`, (data) => {
-        if (!data || data.code !== 0) {
-            return;
-        }
-        updateMetar(data);
-    });
+    $.getJSON(`/metar?icao=${icao}`, updateMetar);
 }
 
 function updateMetar(metar) {
-    $('#valMetarTime').text(moment(metar.time).format('MM/DD HH:mm'));
+    let valid = metar && (metar.code === 0);
+    $('#valMetarTime').text(valid ? moment(metar.time).format('MM/DD HH:mm') : '-');
     $('#valFlightCat').removeClass('IFR LIFR VFR MVFR');
-    $('#valFlightCat').text(metar.flightCat);
-    $('#valFlightCat').addClass(metar.flightCat);
-    $('#valWeather').text(metar.weather ? metar.weather : '-');
-    $('#valVisibility').text(Math.round(metar.visibilityMi * 1.609));
-    $('#valWind').text(`${metar.windDir}° ${metar.windSpeed}`);
-    $('#valTemp').text(metar.temp);
-    $('#valDew').text(metar.dew);
-    let inHg = metar.altimInhg;
-    $('#valInhg').text(inHg.toFixed(2));
-    $('#valHpa').text(Math.round(inHg * 33.86));
+    $('#valFlightCat').text(valid ? metar.flightCat : '-');
+    if (valid) {
+        $('#valFlightCat').addClass(metar.flightCat);
+        $('#valWeather').text(metar.weather ? metar.weather : '-');
+        $('#valVisibility').text(Math.round(metar.visibilityMi * 1.609));
+        $('#valWind').text(`${metar.windDir}° ${metar.windSpeed}`);
+        $('#valTemp').text(metar.temp);
+        $('#valDew').text(metar.dew);
+        let inHg = metar.altimInhg;
+        $('#valInhg').text(inHg.toFixed(2));
+        $('#valHpa').text(Math.round(inHg * 33.86));
+        $('#ulMetarInfo').removeClass('noDisplay');
+    } else {
+        $('#ulMetarInfo').addClass('noDisplay');
+    }
     $('#metar').removeClass('hidden');
 }
 
