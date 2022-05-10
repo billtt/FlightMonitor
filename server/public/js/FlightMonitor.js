@@ -74,12 +74,15 @@ function updateStatus(dataChanged) {
         update('valFuelRate', _status.fuelPerHour * 0.453592);
         update('valFuelTime', _status.fuelWeight / _status.fuelPerHour);
 
+        let ete = _status.ETE;
         let remainingDist = _status.distance;
         // converting from M to NM
         let totalDist = _status.totalDistance / 1000 / NM2KM;
         // use plan's route distance for total distance (more accurate)
         if (_plan) {
-            totalDist = _plan.routeDistance;
+            totalDist = getTotalDistFromPlan();
+            remainingDist = getRemainingDistFromPlan();
+            ete = remainingDist / _status.GS * 3600;
         }
         let completedDist = Math.max(0, totalDist - remainingDist);
         update('valDistance', remainingDist);
@@ -92,9 +95,8 @@ function updateStatus(dataChanged) {
         update('valAltitude', _status.altitude);
         update('valAltitudeM', _status.altitude * FT2M);
 
-        let percent = 100 - (_status.distance / totalDist * 100);
+        let percent = 100 - (remainingDist / totalDist * 100);
         $('#pgbPercent').css('width', percent + '%');
-        let ete = _status.ETE;
         update('valETE', getDisplayTimeSpan(ete));
         update('valETA', moment().add(ete - seconds, 's').format('MM/DD HH:mm'));
 
@@ -103,7 +105,7 @@ function updateStatus(dataChanged) {
         if (_plan) {
             altitude -= _plan.destination.elevation;
         }
-        let angle = Math.atan2(altitude / 6076.12, _status.distance) * 180 / Math.PI;
+        let angle = Math.atan2(altitude / 6076.12, remainingDist) * 180 / Math.PI;
         let desV = Math.round(altitude / ete * 60);
         update('valDesAngle', angle);
         update('valDesVelocity', desV);
@@ -312,6 +314,62 @@ function closeMetar() {
         _metarInterval = null;
     }
     $('#metar').addClass('hidden');
+}
+
+// distance calculation
+// return value in nm
+function distance(lat1, lat2, lon1, lon2) {
+    // The math module contains a function
+    // named toRadians which converts from
+    // degrees to radians.
+    lon1 =  lon1 * Math.PI / 180;
+    lon2 = lon2 * Math.PI / 180;
+    lat1 = lat1 * Math.PI / 180;
+    lat2 = lat2 * Math.PI / 180;
+
+    // Haversine formula
+    let dlon = lon2 - lon1;
+    let dlat = lat2 - lat1;
+    let a = Math.pow(Math.sin(dlat / 2), 2)
+        + Math.cos(lat1) * Math.cos(lat2)
+        * Math.pow(Math.sin(dlon / 2),2);
+
+    let c = 2 * Math.asin(Math.sqrt(a));
+
+    // Radius of earth in nm.
+    let r = 3440.065;
+
+    // calculate the result
+    return(c * r);
+}
+
+function getTotalDistFromPlan() {
+    let dist = 0;
+    let fixes = _plan.fixes;
+    for (let i=0; i<fixes.length-1; i++) {
+        dist += distance(fixes[i].lat, fixes[i+1].lat, fixes[i].long, fixes[i+1].long);
+    }
+    return dist;
+}
+
+function getRemainingDistFromPlan() {
+    let lat = _status.latitude;
+    let lng = _status.longitude;
+    let fixes = _plan.fixes;
+    let leastRat = -1;
+    let dist = 0;
+    for (let i=0; i<fixes.length-1; i++) {
+        let dist1 = distance(lat, fixes[i].lat, lng, fixes[i].long) + distance(lat, fixes[i+1].lat, lng, fixes[i+1].long);
+        let dist2 = distance(fixes[i].lat, fixes[i+1].lat, fixes[i].long, fixes[i+1].long);
+        let rat = (dist1 - dist2) / dist2;
+        if (rat < leastRat || leastRat < 0) {
+            leastRat = rat;
+            dist = distance(lat, fixes[i+1].lat, lng, fixes[i+1].long);
+        } else if (leastRat >= 0) {
+            dist += dist2;
+        }
+    }
+    return dist;
 }
 
 setInterval(getStatus, 3000);
