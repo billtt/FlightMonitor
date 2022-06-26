@@ -33,6 +33,10 @@ function update(prop, value) {
     $('#' + prop).text(value);
 }
 
+function updateHtml(prop, html) {
+    $('#' + prop).html(html);
+}
+
 function updateTimeColor(seconds) {
     let color = 'red';
     if (seconds < 10) {
@@ -40,7 +44,7 @@ function updateTimeColor(seconds) {
     } else if (seconds < 30) {
         color = 'orange';
     }
-    $('#valUpdateTime').css('color', color);
+    $('#spdIndicator').css('border-left-color', color);
 }
 
 function getDisplayTimeSpan(seconds) {
@@ -48,10 +52,10 @@ function getDisplayTimeSpan(seconds) {
     let mins = seconds / 60 % 60;
     let dispSpan = '';
     if (hours > 0) {
-        dispSpan = hours + 'h';
+        dispSpan = hours + '<sup>h</sup>';
     }
     if (hours === 0 || mins > 0) {
-        dispSpan += (hours > 0 ? ' ' : '') + mins.toFixed(0) + 'm';
+        dispSpan += (hours > 0 ? ' ' : '') + mins.toFixed(0) + '<sup>min</sup>';
     }
     return dispSpan;
 }
@@ -63,16 +67,9 @@ function updateStatus(dataChanged) {
     let timestamp = new Date(_status.timestamp);
     let seconds = ((Date.now() - timestamp.getTime()) / 1000).toFixed(0);
     updateTimeColor(seconds);
-    update('valUpdateTime', `${_status.timestamp} (${seconds}s)`);
 
     if (dataChanged) {
         update('valGS', _status.GS);
-        update('valGSKm', _status.GS * NM2KM);
-        update('valTAS', _status.TAS);
-
-        update('valFuel', _status.fuelWeight * 0.453592);
-        update('valFuelRate', _status.fuelPerHour * 0.453592);
-        update('valFuelTime', _status.fuelWeight / _status.fuelPerHour);
 
         let ete = _status.ETE;
         let remainingDist = _status.distance;
@@ -86,18 +83,13 @@ function updateStatus(dataChanged) {
         }
         let completedDist = Math.max(0, totalDist - remainingDist);
         update('valDistance', remainingDist);
-        update('valDistanceKm', remainingDist * NM2KM);
         update('valTotalDist', totalDist);
-        update('valTotalDistKm', totalDist * NM2KM);
-        update('valCompletedDist', completedDist);
-        update('valCompletedDistKm', completedDist * NM2KM);
 
         update('valAltitude', _status.altitude);
-        update('valAltitudeM', _status.altitude * FT2M);
 
         let percent = 100 - (remainingDist / totalDist * 100);
         $('#pgbPercent').css('width', percent + '%');
-        update('valETE', getDisplayTimeSpan(ete));
+        updateHtml('valETE', getDisplayTimeSpan(ete));
         update('valETA', moment().add(ete - seconds, 's').format('MM/DD HH:mm'));
 
         // calculate descent information
@@ -289,18 +281,10 @@ function loadMetar() {
 function updateMetar(metar) {
     let valid = metar && (metar.code === 0);
     $('#valMetarTime').text(valid ? moment(metar.time).format('MM/DD HH:mm') : '-');
-    $('#valFlightCat').removeClass('IFR LIFR VFR MVFR');
-    $('#valFlightCat').text(valid ? metar.flightCat : '-');
+    $('#fcatIndicator').removeClass('IFR LIFR VFR MVFR');
     if (valid) {
-        $('#valFlightCat').addClass(metar.flightCat);
-        $('#valWeather').text(metar.weather ? metar.weather : '-');
-        $('#valVisibility').text(Math.round(metar.visibilityMi * 1.609));
-        $('#valWind').text(`${metar.windDir}° ${metar.windSpeed}`);
-        $('#valTemp').text(metar.temp);
-        $('#valDew').text(metar.dew);
-        let inHg = metar.altimInhg;
-        $('#valInhg').text(inHg.toFixed(2));
-        $('#valHpa').text(Math.round(inHg * 33.86));
+        $('#valMetar').text(metar.raw);
+        $('#fcatIndicator').addClass(metar.flightCat);
         $('#ulMetarInfo').removeClass('noDisplay');
     } else {
         $('#ulMetarInfo').addClass('noDisplay');

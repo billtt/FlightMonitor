@@ -160,7 +160,8 @@ function getMetar(raw) {
         windSpeed: parseF(raw.wind_speed_kt),
         visibilityMi: parseF(raw.visibility_statute_mi),
         altimInhg: parseF(raw.altim_in_hg),
-        flightCat: raw.flight_category[0]
+        flightCat: raw.flight_category[0],
+        raw: raw.raw_text[0]
     };
     if (raw.wx_string) {
         metar.weather = raw.wx_string[0];

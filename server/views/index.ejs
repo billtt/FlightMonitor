@@ -32,7 +32,7 @@
             color: gray;
         }
 
-        .metric {
+        .subtle {
             font-size: 80%;
             color: #343a40;
         }
@@ -58,8 +58,9 @@
         }
 
         #metar {
+            font-family: monospace;
             font-size: 0.9em;
-            max-width: 210px;
+            max-width: 360px;
             position: absolute;
             z-index: 1;
             right: 0px;
@@ -86,14 +87,31 @@
             visibility: hidden;
         }
 
+        .descent-ref {
+            background: #efefef;
+            margin-top: 10px;
+            padding: 6px 0px;
+        }
+
+        .indicator {
+            border-left: 3px solid;
+            padding: 0.6em !important;
+        }
+
+        .button-box {
+            display: inline-block;
+            font-size: 0.8em;
+            width: 100px;
+        }
+
         .noDisplay {
             display: none;
         }
 
-        .LIFR { color: magenta; }
-        .IFR { color: red; }
-        .MVFR { color: blue; }
-        .VFR { color: green; }
+        .LIFR { border-left-color: magenta; }
+        .IFR { border-left-color: red; }
+        .MVFR { border-left-color: blue; }
+        .VFR { border-left-color: green; }
 
     </style>
 
@@ -113,70 +131,39 @@
         <div class="row row-cols-1 row-cols-md-1 mb-3 text-center">
             <div class="col">
                 <div class="card mb-4 rounded-3 shadow-sm">
-                    <div class="card-header py-3">
-                        <span id="valUpdateTime">-</span>
+                    <div class="card-header py-3 indicator" id="spdIndicator">
+                        <div class="button-box">
+                            Follow<br/><input type="checkbox" checked data-toggle="toggle" data-size="sm" id="chkAutoCenter"/>
+                        </div>
+                        <div class="button-box">
+                            Plan<br/><button type="button" class="btn btn-primary btn-sm" id="btPlan">Load</button>
+                        </div>
                     </div>
                     <div class="card-body">
+                        <span style="font-size: 1.2em;">
+                            <b><span id="valDistance">0.0</span> <sup>nm</sup></b>
+                            / <span id="valTotalDist">0.0</span> <sup>nm</sup>
+                        </span>
                         <div class="progress">
-                            <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" aria-valuenow="75" aria-valuemin="0" aria-valuemax="100" style="width: 0%" id="pgbPercent">
-                            </div>
+                            <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" aria-valuenow="75" aria-valuemin="0" aria-valuemax="100" style="width: 0%" id="pgbPercent"></div>
                         </div>
-                        <p style="margin-top: 10px;">
-                            <b>
-                                <span id="valCompletedDist">0.0</span> /
-                                <span id="valTotalDist">0.0</span> <sup>nm</sup>
-                            </b><br/>
-                            <span class="metric">
-                                (<span id="valCompletedDistKm">0.0</span> /
-                                <span id="valTotalDistKm">0.0</span> <sup>km</sup>)
-                            </span>
-                        </p>
-                        <ul class="list-unstyled mt-3 mb-4">
-                            <li class="title">Destination</li>
+                        <ul class="list-unstyled mt-3 mb-4" style="margin: 0px 0px !important;">
                             <li style="font-size: 1.2em;">
-                                <b><span id="valDistance">0.0</span> <sup>nm</sup></b>
-                                <span class="metric">
-                                    (<span id="valDistanceKm">0.0</span> <sup>km</sup>)
-                                </span>
+                                <span id="valETE">0</span>
+                                <span id="valETA" class="subtle">01/01 00:00</span>
                             </li>
                             <li>
-                                <span id="valETE">0</span>
-                                (<span id="valETA">01/01 00:00</span>)
+
                             </li>
-                            <li class="title">Altitude</li>
-                            <li style="font-size: 1.2em;">
-                                <b><span id="valAltitude">0.0</span> <sup>ft</sup></b>
-                                <span class="metric">(<span id="valAltitudeM">0.0</span> <sup>m</sup>)</span>
-                            </li>
-                            <li class="title">Speed</li>
                             <li style="font-size: 1.2em;">
                                 <b><span id="valGS">0.0</span> <sup>kts</sup></b>
-                                <span class="metric">
-                                    (<span id="valGSKm">0.0</span> <sup>km/h</sup>)
-                                </span>
+                                <b><span id="valAltitude">0.0</span> <sup>ft</sup></b>
                             </li>
-                            <li>
-                                <span class="badge bg-secondary">TAS</span>
-                                <span id="valTAS">0.0</span> <sup>kts</sup>
-                            </li>
-                            <li class="title">Fuel</li>
-                            <li>
-                                <span id="valFuel">0.0</span><sup>kg</sup><br/>
-                                <span id="valFuelRate">0.0</span><sup>kg/h</sup>
-                                (<span id="valFuelTime">0.0</span><sup>h</sup>)
-                            </li>
-                            <li class="title">Descent Ref</li>
-                            <li>
+                            <li class="descent-ref">
                                 <span id="valDesAngle">0.0</span>° &nbsp;&nbsp;
                                 <span id="valDesVelocity">0.0</span><sup>ft/min</sup>
                             </li>
                         </ul>
-                        <div style="float:left; font-size: 0.9em; width: 100px;">
-                            Auto Center<br/><input type="checkbox" checked data-toggle="toggle" data-size="sm" id="chkAutoCenter"/>
-                        </div>
-                        <div style="float:right; font-size: 0.9em; width: 100px;">
-                            Flight Plan<br/><button type="button" class="btn btn-primary btn-sm" id="btPlan">Load</button>
-                        </div>
                     </div>
                 </div>
             </div>
@@ -190,37 +177,15 @@
         <div class="row row-cols-1 row-cols-md-1 mb-3 text-center">
             <div class="col">
                 <div class="card mb-4 rounded-3 shadow-sm">
-                    <div class="card-header py-3">
-                        <span id="valIcao">ZBAA</span> (<span id="valFlightCat">VFR</span>)<br/>
-                        <span id="valMetarTime">-</span>
+                    <div class="card-header py-3 indicator" id="fcatIndicator">
+                        <span id="valIcao">ZBAA</span>
+                        <span id="valMetarTime">-</span><br/>
+                        Rwy <span id="valRunway">36L</span> <span id="valElevation">0</span><sup>ft</sup>
                     </div>
                     <div class="card-body">
-                        <ul class="list-unstyled mt-3 mb-4">
-                            <li class="title">Elevation / Runway</li>
-                            <li>
-                                <span id="valElevation">0</span><sup>ft</sup> /
-                                <span id="valRunway">36L</span>
-                            </li>
-                        </ul>
                         <ul class="list-unstyled mt-3 mb-4" id="ulMetarInfo">
-                            <li class="title">Weather / Visibility</li>
                             <li>
-                                <span id="valWeather"></span> /
-                                <span id="valVisibility">100</span><sup>km</sup>
-                            </li>
-                            <li class="title">Wind</li>
-                            <li>
-                                <span id="valWind">0° 0</span><sup>kts</sup>
-                            </li>
-                            <li class="title">Temperature (Dew)</li>
-                            <li>
-                                <span id="valTemp">15</span><sup>°C</sup>
-                                (<span id="valDew">12</span><sup>°C</sup>)
-                            </li>
-                            <li class="title">Altimeter</li>
-                            <li>
-                                <span id="valInhg">29.92</span><sup>inHg</sup>
-                                <span id="valHpa">1008</span><sup>hPa</sup>
+                                <span id="valMetar"></span>
                             </li>
                         </ul>
                     </div>
