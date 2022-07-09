@@ -75,6 +75,14 @@
             font-size: 1.2em;
         }
 
+        #metarOrigin {
+            margin-bottom: 5px !important;
+        }
+
+        #metarOrigin,#metarDest {
+            text-align: left;
+        }
+
         #valIcao, #valFlightCat {
             font-weight: bold;
         }
@@ -176,18 +184,18 @@
     <main>
         <div class="row row-cols-1 row-cols-md-1 mb-3 text-center">
             <div class="col">
-                <div class="card mb-4 rounded-3 shadow-sm">
-                    <div class="card-header py-3 indicator" id="fcatIndicator">
-                        <span id="valIcao">ZBAA</span>
-                        <span id="valMetarTime">-</span><br/>
-                        Rwy <span id="valRunway">36L</span> <span id="valElevation">0</span><sup>ft</sup>
+                <div class="card mb-4 rounded-3 shadow-sm" id="metarOrigin">
+                    <div class="card-header py-3 indicator" id="fcatIndicatorOrigin">
+                        <span id="valIcaoOrigin">ZBAA</span>
+                        Rwy <span id="valRunwayOrigin">36L</span> (<span id="valElevationOrigin">0</span><sup>ft</sup>)<br/>
+                        <span id="valMetarOrigin" style="font-size: 70%;"></span>
                     </div>
-                    <div class="card-body">
-                        <ul class="list-unstyled mt-3 mb-4" id="ulMetarInfo">
-                            <li>
-                                <span id="valMetar"></span>
-                            </li>
-                        </ul>
+                </div>
+                <div class="card mb-4 rounded-3 shadow-sm" id="metarDest">
+                    <div class="card-header py-3 indicator" id="fcatIndicatorDest">
+                        <span id="valIcaoDest">ZBAA</span>
+                        Rwy <span id="valRunwayDest">36L</span> (<span id="valElevationDest">0</span><sup>ft</sup>)<br/>
+                        <span id="valMetarDest" style="font-size: 70%;"></span>
                     </div>
                 </div>
             </div>

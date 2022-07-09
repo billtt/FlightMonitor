@@ -187,7 +187,7 @@ function loadPlan() {
         btPlan.text('Unload');
 
         _metarInterval = setInterval(loadMetar, 60 * 1000);
-        loadMetar();
+        loadMetars();
     });
 }
 
@@ -265,31 +265,41 @@ function unloadPlan() {
     closeMetar();
 }
 
-function loadMetar() {
+function loadMetars() {
     if (!_plan) {
         closeMetar();
         return;
     }
-    let end = _plan[(_status && _status.GS>=50) ? 'destination' : 'origin'];
-    let icao = end.icaoCode;
-    $('#valIcao').text(icao);
-    $('#valRunway').text(end.runway);
-    $('#valElevation').text(end.elevation);
-    $.getJSON(`/metar?icao=${icao}`, updateMetar);
+    loadMetar('Origin');
+    loadMetar('Dest');
+    $('#metar').removeClass('hidden');
 }
 
-function updateMetar(metar) {
+/**
+ * @param domId 'Origin' or 'Dest'
+ */
+function loadMetar(domId) {
+    let end = _plan[(domId === 'Origin' ? 'origin' : 'destination')];
+    let icao = end.icaoCode;
+    $('#valIcao' + domId).text(icao);
+    $('#valRunway' + domId).text(end.runway);
+    $('#valElevation' + domId).text(end.elevation);
+    $.getJSON(`/metar?icao=${icao}`, (json)=> {
+        updateMetar(domId, json);
+    });
+}
+
+function updateMetar(domId, metar) {
     let valid = metar && (metar.code === 0);
-    $('#valMetarTime').text(valid ? moment(metar.time).format('MM/DD HH:mm') : '-');
-    $('#fcatIndicator').removeClass('IFR LIFR VFR MVFR');
+    $('#valMetarTime' + domId).text(valid ? moment(metar.time).format('MM/DD HH:mm') : '-');
+    $('#fcatIndicator' + domId).removeClass('IFR LIFR VFR MVFR');
     if (valid) {
-        $('#valMetar').text(metar.raw);
-        $('#fcatIndicator').addClass(metar.flightCat);
-        $('#ulMetarInfo').removeClass('noDisplay');
+        let raw = metar.raw.substring(13);
+        $('#valMetar' + domId).text(raw);
+        $('#fcatIndicator' + domId).addClass(metar.flightCat);
     } else {
-        $('#ulMetarInfo').addClass('noDisplay');
+        $('#valMetar' + domId).text('');
     }
-    $('#metar').removeClass('hidden');
 }
 
 function closeMetar() {
