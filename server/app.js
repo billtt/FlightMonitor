@@ -17,7 +17,7 @@ app.use(bodyParser.json());
 
 app.post('/', (req, res) => {
     let status = req.body;
-    if (!_status.timestamp || status.timestamp > _status.timestamp) {
+    if (!_status.timestamp || Date.parse(status.timestamp) > Date.parse(_status.timestamp)) {
         _status = status;
     }
     res.end();
