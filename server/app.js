@@ -7,7 +7,7 @@ const config = require('config');
 const axios = require('axios').default;
 const xml2js = require('xml2js');
 
-let status = {};
+let _status = {};
 const metarCache = {};
 
 app.set('views', __dirname + '/views');
@@ -16,7 +16,10 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.use(bodyParser.json());
 
 app.post('/', (req, res) => {
-    status = req.body;
+    let status = req.body;
+    if (!_status.timestamp || status.timestamp > _status.timestamp) {
+        _status = status;
+    }
     res.end();
 });
 
@@ -26,7 +29,7 @@ app.get('/', (req, res) => {
 });
 
 app.get('/status', (req, res) => {
-    res.json(status);
+    res.json(_status);
 });
 
 app.get('/plan', (req, res) => {
