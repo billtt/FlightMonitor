@@ -182,7 +182,7 @@ function initWholeZoom() {
     for (let i=0; i<fixes.length; i++) {
         view.push(fixToBMapPoint(fixes[i]));
     }
-    _wholeZoom = _map.getViewport(view, {margins: [20, 20, 20, 20]}).zoom;
+    _wholeZoom = _map.getViewport(view).zoom;
 }
 
 /**
@@ -221,7 +221,7 @@ function autoZoom() {
         // zoom = _map.getViewport(view, {margins: [20, 20, 20, 20]}).zoom;
         let view = getRemainingPoints();
         view.push(planePoint);
-        zoom = _map.getViewport(view, {margins: [20, 20, 20, 20], zoomFactor: -1}).zoom;
+        zoom = _map.getViewport(view, {zoomFactor: -1}).zoom;
         zoom = Math.min(zoom, Math.round(maxZoom + (_wholeZoom - maxZoom) * _remainingDist / endSegment));
     } else if (_completedDist < startSegment) {
         zoom = Math.round(maxZoom + (_wholeZoom - maxZoom) * _completedDist / startSegment);
