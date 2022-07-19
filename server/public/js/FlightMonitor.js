@@ -179,7 +179,7 @@ function initWholeZoom() {
     }
     let view = [];
     let fixes = _plan.fixes;
-    for (let i=0; i<fixes; i++) {
+    for (let i=0; i<fixes.length; i++) {
         view.push(fixToBMapPoint(fixes[i]));
     }
     _wholeZoom = _map.getViewport(view, {margins: [20, 20, 20, 20]}).zoom;
