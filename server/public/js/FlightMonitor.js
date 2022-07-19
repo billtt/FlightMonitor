@@ -8,8 +8,18 @@ let _plane = null;
 let _plan = null;
 let _metarInterval = null;
 let _rawConvertor = null;
+let _wholeZoom = 8;
+let _remainingDist = 0;
+let _completedDist = 0;
+let _debug = false;
+let _lastDragTime = 0;
+
+// workaround of not knowing if a zoom change is triggered by user
+let _autoZooming = false;
+
 const NM2KM = 1.852;
 const FT2M = 0.3048;
+const DEFAULT_ZOOM = 8;
 
 function getStatus() {
     $.getJSON('/status', (data) => {
@@ -19,8 +29,9 @@ function getStatus() {
             }
             // If not in simulation, keep plane at previous position
             if (data.TAS > 0 || Math.abs(data.latitude) > 1 || Math.abs(data.longitude) > 1) {
+                let updated = !_status || (_status.timestamp !== data.timestamp);
                 _status = data;
-                updateStatus(true);
+                updateStatus(updated);
             }
         }
     });
@@ -72,22 +83,22 @@ function updateStatus(dataChanged) {
         update('valGS', _status.GS);
 
         let ete = _status.ETE;
-        let remainingDist = _status.distance;
+        _remainingDist = _status.distance;
         // converting from M to NM
         let totalDist = _status.totalDistance / 1000 / NM2KM;
         // use plan's route distance for total distance (more accurate)
         if (_plan) {
             totalDist = getTotalDistFromPlan();
-            remainingDist = getRemainingDistFromPlan();
-            ete = remainingDist / _status.GS * 3600;
+            _remainingDist = getRemainingDistFromPlan();
+            ete = _remainingDist / _status.GS * 3600;
         }
-        let completedDist = Math.max(0, totalDist - remainingDist);
-        update('valDistance', remainingDist);
+        _completedDist = Math.max(0, totalDist - _remainingDist);
+        update('valDistance', _remainingDist);
         update('valTotalDist', totalDist);
 
         update('valAltitude', _status.altitude);
 
-        let percent = 100 - (remainingDist / totalDist * 100);
+        let percent = 100 - (_remainingDist / totalDist * 100);
         $('#pgbPercent').css('width', percent + '%');
         updateHtml('valETE', getDisplayTimeSpan(ete));
         update('valETA', moment().add(ete - seconds, 's').format('MM/DD HH:mm'));
@@ -97,7 +108,7 @@ function updateStatus(dataChanged) {
         if (_plan) {
             altitude -= _plan.destination.elevation;
         }
-        let angle = Math.atan2(altitude / 6076.12, remainingDist) * 180 / Math.PI;
+        let angle = Math.atan2(altitude / 6076.12, _remainingDist) * 180 / Math.PI;
         let desV = Math.round(altitude / ete * 60);
         update('valDesAngle', angle);
         update('valDesVelocity', desV);
@@ -107,7 +118,6 @@ function updateStatus(dataChanged) {
     }
 }
 
-// map
 function init() {
     _rawConvertor = new BMap.Convertor();
 
@@ -115,8 +125,20 @@ function init() {
     let startPoint = new BMap.Point(121.805278, 31.143333);
     _map = new BMap.Map("map");
     _map.enableScrollWheelZoom();
-    _map.centerAndZoom(startPoint, 8);
+    _map.centerAndZoom(startPoint, DEFAULT_ZOOM);
     _map.addEventListener('dragend', onMapDragged);
+    _map.addEventListener('zoomstart', onZoom);
+
+    if (_debug) {
+        _map.addEventListener('click', (params)=>{
+            let p = params.point;
+            if (_status) {
+                _status.longitude = p.lng;
+                _status.latitude = p.lat;
+                updateStatus(true);
+            }
+        });
+    }
 
     let nav = new BMap.NavigationControl({type: BMAP_NAVIGATION_CONTROL_ZOOM, anchor: BMAP_ANCHOR_BOTTOM_RIGHT});
     _map.addControl(nav);
@@ -128,7 +150,13 @@ function init() {
 
     $('#chkAutoCenter').change(() => {
         if (isAutoCenter()) {
-            _map.panTo(_plane.getPosition());
+            _map.setCenter(_plane.getPosition());
+        }
+    });
+
+    $('#chkAutoZoom').change(() => {
+        if (isAutoZoom() && isAutoCenter()) {
+            autoZoom();
         }
     });
 
@@ -140,6 +168,73 @@ function init() {
             unloadPlan();
         }
     });
+
+    setInterval(getStatus, 3000);
+}
+
+function initWholeZoom() {
+    if (!_plan || !_map) {
+        _wholeZoom = DEFAULT_ZOOM;
+        return;
+    }
+    let view = [];
+    let fixes = _plan.fixes;
+    for (let i=0; i<fixes; i++) {
+        view.push(fixToBMapPoint(fixes[i]));
+    }
+    _wholeZoom = _map.getViewport(view, {margins: [20, 20, 20, 20]}).zoom;
+}
+
+/**
+ * Return array of remaining points on route as BMap.Point
+ */
+function getRemainingPoints() {
+    if (!_plan) {
+        return [];
+    }
+    let points = [];
+    let fixes = _plan.fixes;
+    if (!_plan.currentFix) {
+        points.push(fixToBMapPoint(fixes[fixes.length-1]));
+    } else {
+        for (let i=_plan.currentFix; i<fixes.length; i++) {
+            points.push(fixToBMapPoint(fixes[i]));
+        }
+    }
+    return points;
+}
+
+function autoZoom() {
+    if (!_plan || !_map || !_plane) {
+        return;
+    }
+    const maxZoom = 15;
+    const startSegment = 50;
+    const endSegment = 200;
+    let zoom = 0;
+    if (_remainingDist < endSegment) {
+        // let destApt = _plan.fixes[_plan.fixes.length - 1];
+        // let destPoint = new BMap.Point(destApt.long, destApt.lat);
+        let planePoint = _plane.getPosition();
+        // let oppPoint = new BMap.Point(2 * planePoint.lng - destPoint.lng, 2 * planePoint.lat - destPoint.lat);
+        // let view = [destPoint, planePoint, oppPoint];
+        // zoom = _map.getViewport(view, {margins: [20, 20, 20, 20]}).zoom;
+        let view = getRemainingPoints();
+        view.push(planePoint);
+        zoom = _map.getViewport(view, {margins: [20, 20, 20, 20], zoomFactor: -1}).zoom;
+        zoom = Math.min(zoom, Math.round(maxZoom + (_wholeZoom - maxZoom) * _remainingDist / endSegment));
+    } else if (_completedDist < startSegment) {
+        zoom = Math.round(maxZoom + (_wholeZoom - maxZoom) * _completedDist / startSegment);
+    } else {
+        zoom = _wholeZoom;
+    }
+    zoom = Math.min(zoom, maxZoom);
+    _autoZooming = true;
+    _map.setZoom(zoom);
+    _autoZooming = false;
+    if (_debug) {
+        console.log('Auto zoom: ' + zoom);
+    }
 }
 
 function updatePosition(longitude, latitude, heading) {
@@ -149,21 +244,39 @@ function updatePosition(longitude, latitude, heading) {
             let tPoint = data.points[0];
             _plane.setPosition(tPoint);
             _plane.setRotation(heading);
-            if (isAutoCenter()) { // 10s after dragging the map
-                _map.panTo(tPoint);
+            if (isAutoCenter() && !isJustDragged()) {
+                _map.setCenter(tPoint, {noAnimation: true});
+                if (isAutoZoom()) {
+                    autoZoom();
+                }
             }
         }
     });
 }
 
-function onMapDragged() {
-    if (isAutoCenter()) {
-        setAutoCenter(false);
+function onZoom() {
+    if (_debug) {
+        console.log(`Zoom changed: ${_map.getZoom()}, auto: ${_autoZooming}`);
     }
+    if (!_autoZooming) {
+        _lastDragTime = Date.now();
+    }
+}
+
+function onMapDragged() {
+    _lastDragTime = Date.now();
+}
+
+function isJustDragged() {
+    return Date.now() - _lastDragTime < 10000;
 }
 
 function isAutoCenter() {
     return $('#chkAutoCenter').prop('checked');
+}
+
+function isAutoZoom() {
+    return $('#chkAutoZoom').prop('checked');
 }
 
 function setAutoCenter(auto) {
@@ -188,6 +301,7 @@ function loadPlan() {
 
         _metarInterval = setInterval(loadMetar, 60 * 1000);
         loadMetars();
+        initWholeZoom();
     });
 }
 
@@ -200,7 +314,7 @@ function drawFlightPlan() {
     // convert coordinates
     let points = [];
     for (let i=0; i<fixes.length; i++) {
-        points.push(new BMap.Point(fixes[i].long, fixes[i].lat));
+        points.push(fixToBMapPoint(fixes[i]));
     }
     new MapConvertor(_rawConvertor, points, (data) => {
         if (data.status === 0 && data.points.length === fixes.length) {
@@ -263,6 +377,7 @@ function unloadPlan() {
     btPlan.text('Load');
 
     closeMetar();
+    initWholeZoom();
 }
 
 function loadMetars() {
@@ -308,6 +423,13 @@ function closeMetar() {
         _metarInterval = null;
     }
     $('#metar').addClass('hidden');
+}
+
+/**
+ * Convert fix to BMap.Point
+ */
+function fixToBMapPoint(fix) {
+    return new BMap.Point(fix.long, fix.lat);
 }
 
 // distance calculation
@@ -359,6 +481,7 @@ function getRemainingDistFromPlan() {
         if (rat < leastRat || leastRat < 0) {
             leastRat = rat;
             dist = distance(lat, fixes[i+1].lat, lng, fixes[i+1].long);
+            _plan.currentFix = i+1;
         } else if (leastRat >= 0) {
             dist += dist2;
         }
@@ -366,4 +489,3 @@ function getRemainingDistFromPlan() {
     return dist;
 }
 
-setInterval(getStatus, 3000);

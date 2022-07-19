@@ -110,7 +110,7 @@
         .button-box {
             display: inline-block;
             font-size: 0.8em;
-            width: 100px;
+            width: 80px;
         }
 
         .noDisplay {
@@ -142,10 +142,13 @@
                 <div class="card mb-4 rounded-3 shadow-sm">
                     <div class="card-header py-3 indicator" id="spdIndicator">
                         <div class="button-box">
+                            Plan<br/><button type="button" class="btn btn-primary btn-sm" id="btPlan">Load</button>
+                        </div>
+                        <div class="button-box">
                             Follow<br/><input type="checkbox" checked data-toggle="toggle" data-size="sm" id="chkAutoCenter"/>
                         </div>
                         <div class="button-box">
-                            Plan<br/><button type="button" class="btn btn-primary btn-sm" id="btPlan">Load</button>
+                            Zoom<br/><input type="checkbox" checked data-toggle="toggle" data-size="sm" id="chkAutoZoom"/>
                         </div>
                     </div>
                     <div class="card-body">
