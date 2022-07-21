@@ -72,8 +72,12 @@ function onKeyDown(event) {
     if (key === 'p' && _chart) {
         let sw = _chart.getBounds().getSouthWest();
         let ne = _chart.getBounds().getNorthEast();
-        message('Chart bounds:\n' +
-            `(${sw.lng}, ${sw.lat}), (${ne.lng}, ${ne.lat})`)
+        let json = {
+            sw: [sw.lng, sw.lat],
+            ne: [ne.lng, ne.lat]
+        }
+        message('Chart config:\n' +
+            JSON.stringify(json, null, 4));
     }
 }
 
