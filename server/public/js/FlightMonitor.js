@@ -6,6 +6,7 @@ let _status = null;
 let _map = null;
 let _plane = null;
 let _plan = null;
+let _chart = null;
 let _metarInterval = null;
 let _rawConvertor = null;
 let _wholeZoom = 8;
@@ -13,6 +14,7 @@ let _remainingDist = 0;
 let _completedDist = 0;
 let _debug = false;
 let _lastDragTime = 0;
+let _unavailableCharts = [];
 
 // workaround of not knowing if a zoom change is triggered by user
 let _autoZooming = false;
@@ -20,6 +22,8 @@ let _autoZooming = false;
 const NM2KM = 1.852;
 const FT2M = 0.3048;
 const DEFAULT_ZOOM = 8;
+const CHART_DISTANCE = 5;
+const ZOOM_CHART = 16;
 
 function getStatus() {
     $.getJSON('/status', (data) => {
@@ -115,6 +119,27 @@ function updateStatus(dataChanged) {
 
         // update map
         updatePosition(_status.longitude, _status.latitude, _status.headingMagnetic);
+
+        // check and load chart
+        let aptCode = null;
+        if (_plan) {
+            let pos = _plane.getPosition();
+            [_plan.origin, _plan.destination].forEach((apt)=>{
+                let dist = distance(pos.lat, apt.lat, pos.lng, apt.long);
+                if (dist <= CHART_DISTANCE) {
+                    aptCode = apt.icaoCode;
+                }
+            });
+            if (aptCode) {
+                if ((!_chart || _chart.code !== aptCode) && !_unavailableCharts.includes(aptCode)) {
+                    loadChart(aptCode);
+                }
+            } else {
+                if (_chart) {
+                    removeChart();
+                }
+            }
+        }
     }
 }
 
@@ -229,6 +254,12 @@ function autoZoom() {
         zoom = _wholeZoom;
     }
     zoom = Math.min(zoom, maxZoom);
+
+    // set zoom for chart
+    if (_chart) {
+        zoom = ZOOM_CHART;
+    }
+
     _autoZooming = true;
     _map.setZoom(zoom);
     _autoZooming = false;
@@ -489,3 +520,33 @@ function getRemainingDistFromPlan() {
     return dist;
 }
 
+function removeChart() {
+    if (_chart) {
+        _map.removeOverlay(_chart);
+        _chart = null;
+    }
+}
+
+function loadChart(aptCode) {
+    if (_chart) {
+        removeChart();
+    }
+    $.getJSON('charts/' + aptCode + '.json', (data) => {
+        if (!data || !data.sw) {
+            _unavailableCharts.push(aptCode);
+            return;
+        }
+        let bounds = new BMap.Bounds(
+            new BMap.Point(data.sw[0], data.sw[1]),
+            new BMap.Point(data.ne[0], data.ne[1])
+        );
+        _chart = new BMap.GroundOverlay(bounds, {
+            imageURL: 'charts/' + aptCode + '.png',
+            opacity: 0.5
+        });
+        _chart.code = aptCode;
+        _map.addOverlay(_chart);
+    }).fail(()=>{
+        _unavailableCharts.push(aptCode);
+    });
+}
