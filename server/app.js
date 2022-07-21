@@ -28,6 +28,11 @@ app.get('/', (req, res) => {
     res.render('index');
 });
 
+app.get('/chart-tool', (req, res) => {
+    res.locals.ak = config.get('ak');
+    res.render('ChartTool');
+});
+
 app.get('/status', (req, res) => {
     res.json(_status);
 });

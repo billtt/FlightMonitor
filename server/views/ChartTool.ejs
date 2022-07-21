@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+
+    <meta name="viewport" content="initial-scale=1.0, user-scalable=no" />
+
+    <link href="css/bootstrap.min.css" rel="stylesheet">
+    <link href="css/bootstrap4-toggle.min.css" rel="stylesheet">
+    <script type="text/javascript" src="js/ChartTool.js"></script>
+    <script src="js/jquery-3.6.0.min.js"></script>
+    <script src="js/moment.js"></script>
+    <script src="js/bootstrap.min.js"></script>
+    <style type="text/css">
+        html {
+            height: 100%;
+        }
+
+        body {
+            height: 100%;
+            margin: 0;
+            paddng: 0;
+        }
+
+        #map {
+            height: 100%;
+        }
+
+        #msg {
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            width: auto;
+            height: auto;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.7);
+        }
+    </style>
+
+    <title>Chart Tool</title>
+</head>
+<body>
+
+<div id="map"></div>
+<div id="msg" class="float-left"></div>
+
+<script type="text/javascript" src="//api.map.baidu.com/api?v=3.0&ak=<%=ak%>&callback=init"></script>
+
+</body>
+</html>

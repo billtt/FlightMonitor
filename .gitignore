@@ -6,3 +6,4 @@ server/node_modules
 FlightMonitor.csproj.user
 packages
 server/config/default.json
+server/public/charts
