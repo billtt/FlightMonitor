@@ -7,3 +7,4 @@ FlightMonitor.csproj.user
 packages
 server/config/default.json
 server/public/charts
+server/sync-charts.sh
