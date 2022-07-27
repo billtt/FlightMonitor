@@ -24,7 +24,7 @@ const FT2M = 0.3048;
 const DEFAULT_ZOOM = 8;
 const MIN_WHOLEZOOM = 7;
 const CHART_DISTANCE = 5;
-const CHART_ZOOM = 17;
+const CHART_ZOOM = 16;
 
 function getStatus() {
     $.getJSON('/status', (data) => {
