@@ -23,7 +23,7 @@ const NM2KM = 1.852;
 const FT2M = 0.3048;
 const DEFAULT_ZOOM = 8;
 const CHART_DISTANCE = 5;
-const ZOOM_CHART = 16;
+const CHART_ZOOM = 17;
 
 function getStatus() {
     $.getJSON('/status', (data) => {
@@ -257,7 +257,7 @@ function autoZoom() {
 
     // set zoom for chart
     if (_chart) {
-        zoom = ZOOM_CHART;
+        zoom = CHART_ZOOM;
     }
 
     _autoZooming = true;
