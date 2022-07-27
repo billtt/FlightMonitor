@@ -22,6 +22,7 @@ let _autoZooming = false;
 const NM2KM = 1.852;
 const FT2M = 0.3048;
 const DEFAULT_ZOOM = 8;
+const MIN_WHOLEZOOM = 7;
 const CHART_DISTANCE = 5;
 const CHART_ZOOM = 17;
 
@@ -152,7 +153,8 @@ function init() {
     _map.enableScrollWheelZoom();
     _map.centerAndZoom(startPoint, DEFAULT_ZOOM);
     _map.addEventListener('dragend', onMapDragged);
-    _map.addEventListener('zoomstart', onZoom);
+    _map.addEventListener('zoomstart', onZoomStart);
+    _map.addEventListener('zoomend', onZoomEnd);
 
     if (_debug) {
         _map.addEventListener('click', (params)=>{
@@ -207,7 +209,7 @@ function initWholeZoom() {
     for (let i=0; i<fixes.length; i++) {
         view.push(fixToBMapPoint(fixes[i]));
     }
-    _wholeZoom = _map.getViewport(view).zoom;
+    _wholeZoom = Math.max(MIN_WHOLEZOOM, _map.getViewport(view).zoom);
 }
 
 /**
@@ -285,9 +287,15 @@ function updatePosition(longitude, latitude, heading) {
     });
 }
 
-function onZoom() {
+function onZoomEnd() {
     if (_debug) {
-        console.log(`Zoom changed: ${_map.getZoom()}, auto: ${_autoZooming}`);
+        console.log(`Zoom changed: ${_map.getZoom()}`);
+    }
+}
+
+function onZoomStart() {
+    if (_debug) {
+        console.log(`Zoom start, auto: ${_autoZooming}`);
     }
     if (!_autoZooming) {
         _lastDragTime = Date.now();
