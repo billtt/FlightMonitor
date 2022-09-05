@@ -1,4 +1,5 @@
 {
   "ak": "YOUR-AK-CODE-FROM-BAIDU-DEVELOPER-CONSOLE",
-  "simbriefId": "YOUR-SIMBRIEF-NUMERIC-ID"
+  "simbriefId": "YOUR-SIMBRIEF-NUMERIC-ID",
+  "debug": false
 }

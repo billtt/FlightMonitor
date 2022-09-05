@@ -126,7 +126,7 @@ function updateStatus(dataChanged) {
         if (_plan) {
             let pos = _plane.getPosition();
             [_plan.origin, _plan.destination].forEach((apt)=>{
-                let dist = distance(pos.lat, apt.lat, pos.lng, apt.long);
+                let dist = distance(pos.lat, pos.lng, apt.lat, apt.long);
                 if (dist <= CHART_DISTANCE) {
                     aptCode = apt.icaoCode;
                 }
@@ -221,10 +221,10 @@ function getRemainingPoints() {
     }
     let points = [];
     let fixes = _plan.fixes;
-    if (!_plan.currentFix) {
+    if (!_plan.currentFixIndex) {
         points.push(fixToBMapPoint(fixes[fixes.length-1]));
     } else {
-        for (let i=_plan.currentFix; i<fixes.length; i++) {
+        for (let i=_plan.currentFixIndex; i<fixes.length; i++) {
             points.push(fixToBMapPoint(fixes[i]));
         }
     }
@@ -471,38 +471,11 @@ function fixToBMapPoint(fix) {
     return new BMap.Point(fix.long, fix.lat);
 }
 
-// distance calculation
-// return value in nm
-function distance(lat1, lat2, lon1, lon2) {
-    // The math module contains a function
-    // named toRadians which converts from
-    // degrees to radians.
-    lon1 =  lon1 * Math.PI / 180;
-    lon2 = lon2 * Math.PI / 180;
-    lat1 = lat1 * Math.PI / 180;
-    lat2 = lat2 * Math.PI / 180;
-
-    // Haversine formula
-    let dlon = lon2 - lon1;
-    let dlat = lat2 - lat1;
-    let a = Math.pow(Math.sin(dlat / 2), 2)
-        + Math.cos(lat1) * Math.cos(lat2)
-        * Math.pow(Math.sin(dlon / 2),2);
-
-    let c = 2 * Math.asin(Math.sqrt(a));
-
-    // Radius of earth in nm.
-    let r = 3440.065;
-
-    // calculate the result
-    return(c * r);
-}
-
 function getTotalDistFromPlan() {
     let dist = 0;
     let fixes = _plan.fixes;
     for (let i=0; i<fixes.length-1; i++) {
-        dist += distance(fixes[i].lat, fixes[i+1].lat, fixes[i].long, fixes[i+1].long);
+        dist += distance(fixes[i].lat, fixes[i].long, fixes[i+1].lat, fixes[i+1].long);
     }
     return dist;
 }
@@ -511,18 +484,18 @@ function getRemainingDistFromPlan() {
     let lat = _status.latitude;
     let lng = _status.longitude;
     let fixes = _plan.fixes;
-    let leastRat = -1;
+    let minDist = -1;
     let dist = 0;
     for (let i=0; i<fixes.length-1; i++) {
-        let dist1 = distance(lat, fixes[i].lat, lng, fixes[i].long) + distance(lat, fixes[i+1].lat, lng, fixes[i+1].long);
-        let dist2 = distance(fixes[i].lat, fixes[i+1].lat, fixes[i].long, fixes[i+1].long);
-        let rat = (dist1 - dist2) / dist2;
-        if (rat < leastRat || leastRat < 0) {
-            leastRat = rat;
-            dist = distance(lat, fixes[i+1].lat, lng, fixes[i+1].long);
-            _plan.currentFix = i+1;
-        } else if (leastRat >= 0) {
-            dist += dist2;
+        let dist2Arc = crossarc(fixes[i].lat, fixes[i].long, fixes[i+1].lat, fixes[i+1].long, lat, lng);
+        let dist2Wpt = distance(lat, lng, fixes[i+1].lat, fixes[i+1].long);
+        let arcLen = distance(fixes[i].lat, fixes[i].long, fixes[i+1].lat, fixes[i+1].long);
+        if (dist2Arc < minDist || minDist < 0) {
+            minDist = dist2Arc;
+            dist = dist2Wpt;
+            _plan.currentFixIndex = i+1;
+        } else if (minDist >= 0) {
+            dist += arcLen;
         }
     }
     return dist;
