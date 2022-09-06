@@ -271,7 +271,7 @@ function autoZoom() {
     if (_remainingDist < endSegment) {
         // let destApt = _plan.fixes[_plan.fixes.length - 1];
         // let destPoint = new BMap.Point(destApt.long, destApt.lat);
-        let planePoint = _plane.getPosition();
+        let planePoint = new BMap.Point(_status.longitude, _status.latitude);
         // let oppPoint = new BMap.Point(2 * planePoint.lng - destPoint.lng, 2 * planePoint.lat - destPoint.lat);
         // let view = [destPoint, planePoint, oppPoint];
         // zoom = _map.getViewport(view, {margins: [20, 20, 20, 20]}).zoom;
