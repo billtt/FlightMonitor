@@ -118,7 +118,7 @@ function updateStatus(dataChanged) {
         $('#pgbPercent').css('width', percent + '%');
 
         // calculate descent information
-        if (ete == 0 || totalDist == 0 || _remainingDist < 10) {
+        if (ete == 0 || totalDist == 0 || _remainingDist < 10 || _status.GS < 100) {
             hide('descentRef');
         } else {
             unhide('descentRef');
