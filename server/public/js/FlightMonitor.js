@@ -16,6 +16,9 @@ let _debug = false;
 let _lastDragTime = 0;
 let _unavailableCharts = [];
 
+// fix of remaining distance
+let _remainingFix = 0;
+
 // workaround of not knowing if a zoom change is triggered by user
 let _autoZooming = false;
 
@@ -98,6 +101,13 @@ function updateStatus(dataChanged) {
             _remainingDist = getRemainingDistFromPlan();
             ete = _remainingDist / _status.GS * 3600;
         }
+        _remainingDist += _remainingFix;
+
+        // make sure distance is not less than direct distance to destination
+        if (_plan) {
+            _remainingDist = Math.max(_remainingDist, distance(_status.latitude, _status.longitude, _plan.destination.lat, _plan.destination.long));
+        }
+
         _completedDist = Math.max(0, totalDist - _remainingDist);
         update('valDistance', _remainingDist);
         update('valTotalDist', totalDist);
@@ -136,9 +146,8 @@ function updateStatus(dataChanged) {
         // check and load chart
         let aptCode = null;
         if (_plan) {
-            let pos = _plane.getPosition();
             [_plan.origin, _plan.destination].forEach((apt)=>{
-                let dist = distance(pos.lat, pos.lng, apt.lat, apt.long);
+                let dist = distance(_status.latitude, _status.longitude, apt.lat, apt.long);
                 if (dist <= CHART_DISTANCE) {
                     aptCode = apt.icaoCode;
                 }
@@ -205,6 +214,14 @@ function init() {
             loadPlan();
         } else if (btPlan.text() === 'Unload') {
             unloadPlan();
+        }
+    });
+
+    $('#btFixDistance').click(() => {
+        fix = parseFloat(window.prompt('Remaining distance fix value', '' + _remainingFix));
+        if (!isNaN(fix)) {
+            _remainingFix = fix;
+            updateStatus(true);
         }
     });
 
@@ -347,6 +364,7 @@ function loadPlan() {
             return;
         }
         _plan = data;
+        _remainingFix = 0;
         drawFlightPlan();
         btPlan.text('Unload');
 
