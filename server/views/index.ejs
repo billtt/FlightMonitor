@@ -152,27 +152,25 @@
                         </div>
                     </div>
                     <div class="card-body">
-                        <span style="font-size: 1.2em;">
-                            <b><span id="valDistance">0.0</span> <sup>nm</sup></b>
-                            / <span id="valTotalDist">0.0</span> <sup>nm</sup>
-                        </span>
                         <div class="progress">
                             <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" aria-valuenow="75" aria-valuemin="0" aria-valuemax="100" style="width: 0%" id="pgbPercent"></div>
                         </div>
+                        <span style="font-size: 1.2em;">
+                            <b><span id="valDistance">0.0</span> <sup>nm</sup></b>
+                            / <span id="valTotalDist">0.0</span> <sup>nm</sup>
+                            <button type="button" class="btn btn-light btn-sm" id="btFixDistance" style="margin-bottom: 5px;">...</button>
+                        </span>
                         <ul class="list-unstyled mt-3 mb-4" style="margin: 0px 0px !important;">
-                            <li style="font-size: 1.2em;">
-                                <span id="valETE">0</span>
-                                <span id="valETA" class="subtle">01/01 00:00</span>
-                            </li>
-                            <li>
-
-                            </li>
                             <li style="font-size: 1.2em;">
                                 <b><span id="valGS">0.0</span> <sup>kts</sup></b>
                                 <b><span id="valAltitude">0.0</span> <sup>ft</sup></b>
                             </li>
-                            <li class="descent-ref">
-                                <span id="valDesAngle">0.0</span>° &nbsp;&nbsp;
+                            <li class="descent-ref noDisplay" id="descentRef">
+                                <span style="color:gray;">ToD</span>
+                                <span id="valTodDistance" style="font-weight:bold;">0.0</span> <sup>nm</sup> |
+                                <span id="valTodEte">0<sup>h</sup>0<sup>min</sup></span>
+                                <br/>
+                                <span id="valDesAngle">0.0</span>°
                                 <span id="valDesVelocity">0.0</span><sup>ft/min</sup>
                             </li>
                         </ul>
@@ -184,7 +182,7 @@
     </main>
 </div>
 
-<div class="container hidden" id="metar">
+<div class="container noDisplay" id="metar">
     <main>
         <div class="row row-cols-1 row-cols-md-1 mb-3 text-center">
             <div class="col">

@@ -73,3 +73,20 @@ function crossarc(lat1, lon1, lat2, lon2, lat3, lon3) {
     }
     return dxa;
 }
+
+function getDisplayTimeSpan(seconds) {
+    let dispSpan = '';
+    if (seconds < 0) {
+        dispSpan = '-';
+        seconds = -seconds;
+    }
+    let hours = Math.floor(seconds / 3600);
+    let mins = seconds / 60 % 60;
+    if (hours > 0) {
+        dispSpan += hours + '<sup>h</sup>';
+    }
+    if (hours === 0 || mins > 0) {
+        dispSpan += (hours > 0 ? ' ' : '') + mins.toFixed(0) + '<sup>min</sup>';
+    }
+    return dispSpan;
+}

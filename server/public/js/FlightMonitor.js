@@ -53,6 +53,20 @@ function updateHtml(prop, html) {
     $('#' + prop).html(html);
 }
 
+function hide(id) {
+    let element = $('#' + id);
+    if (!element.hasClass('noDisplay')) {
+        element.addClass('noDisplay');
+    }
+}
+
+function unhide(id) {
+    let element = $('#' + id);
+    if (element.hasClass('noDisplay')) {
+        element.removeClass('noDisplay');
+    }
+}
+
 function updateTimeColor(seconds) {
     let color = 'red';
     if (seconds < 10) {
@@ -61,19 +75,6 @@ function updateTimeColor(seconds) {
         color = 'orange';
     }
     $('#spdIndicator').css('border-left-color', color);
-}
-
-function getDisplayTimeSpan(seconds) {
-    let hours = Math.floor(seconds / 3600);
-    let mins = seconds / 60 % 60;
-    let dispSpan = '';
-    if (hours > 0) {
-        dispSpan = hours + '<sup>h</sup>';
-    }
-    if (hours === 0 || mins > 0) {
-        dispSpan += (hours > 0 ? ' ' : '') + mins.toFixed(0) + '<sup>min</sup>';
-    }
-    return dispSpan;
 }
 
 function updateStatus(dataChanged) {
@@ -105,18 +106,29 @@ function updateStatus(dataChanged) {
 
         let percent = 100 - (_remainingDist / totalDist * 100);
         $('#pgbPercent').css('width', percent + '%');
-        updateHtml('valETE', getDisplayTimeSpan(ete));
-        update('valETA', moment().add(ete - seconds, 's').format('MM/DD HH:mm'));
 
         // calculate descent information
-        let altitude = _status.altitude;
-        if (_plan) {
-            altitude -= _plan.destination.elevation;
+        if (ete == 0 || totalDist == 0 || _remainingDist < 10) {
+            hide('descentRef');
+        } else {
+            unhide('descentRef');
+            let altitude = _status.altitude;
+            if (_plan) {
+                altitude -= _plan.destination.elevation;
+            }
+            // quick calculation
+            let todDistance = _remainingDist - altitude / 300;
+            // consider deacceleration
+            todDistance -= (Math.max(0, _status.IAS) - 140) / 20;
+            todEteSeconds = todDistance / _status.GS * 3600;
+            $('#valTodDistance').text(todDistance.toFixed(1));
+            $('#valTodEte').html(getDisplayTimeSpan(todEteSeconds));
+
+            let angle = Math.atan2(altitude / 6076.12, _remainingDist) * 180 / Math.PI;
+            let desV = Math.round(altitude / ete * 60);
+            update('valDesAngle', angle);
+            update('valDesVelocity', desV);
         }
-        let angle = Math.atan2(altitude / 6076.12, _remainingDist) * 180 / Math.PI;
-        let desV = Math.round(altitude / ete * 60);
-        update('valDesAngle', angle);
-        update('valDesVelocity', desV);
 
         // update map
         updatePosition(_status.longitude, _status.latitude, _status.headingMagnetic);
@@ -426,7 +438,7 @@ function loadMetars() {
     }
     loadMetar('Origin');
     loadMetar('Dest');
-    $('#metar').removeClass('hidden');
+    unhide('metar');
 }
 
 /**
@@ -461,7 +473,7 @@ function closeMetar() {
         clearInterval(_metarInterval);
         _metarInterval = null;
     }
-    $('#metar').addClass('hidden');
+    hide('metar');
 }
 
 /**
