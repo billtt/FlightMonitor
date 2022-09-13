@@ -17,7 +17,7 @@ let _lastDragTime = 0;
 let _unavailableCharts = [];
 
 // fix of remaining distance
-let _remainingFix = 0;
+let _distanceFix = 0;
 
 // workaround of not knowing if a zoom change is triggered by user
 let _autoZooming = false;
@@ -101,7 +101,8 @@ function updateStatus(dataChanged) {
             _remainingDist = getRemainingDistFromPlan();
             ete = _remainingDist / _status.GS * 3600;
         }
-        _remainingDist += _remainingFix;
+        totalDist += _distanceFix;
+        _remainingDist += _distanceFix;
 
         // make sure distance is not less than direct distance to destination
         if (_plan) {
@@ -218,9 +219,9 @@ function init() {
     });
 
     $('#btFixDistance').click(() => {
-        fix = parseFloat(window.prompt('Remaining distance fix value', '' + _remainingFix));
+        fix = parseFloat(window.prompt('Remaining distance fix value', '' + _distanceFix));
         if (!isNaN(fix)) {
-            _remainingFix = fix;
+            _distanceFix = fix;
             updateStatus(true);
         }
     });
@@ -364,7 +365,7 @@ function loadPlan() {
             return;
         }
         _plan = data;
-        _remainingFix = 0;
+        _distanceFix = 0;
         drawFlightPlan();
         btPlan.text('Unload');
 
@@ -442,6 +443,7 @@ function drawFlightPlan() {
 function unloadPlan() {
     _plan = null;
     _map.clearOverlays();
+    _distanceFix = 0;
     const btPlan = $('#btPlan');
     btPlan.text('Load');
 
