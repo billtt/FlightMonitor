@@ -142,7 +142,7 @@ function updateStatus(dataChanged) {
         }
 
         // update map
-        updatePosition(_status.longitude, _status.latitude, _status.headingMagnetic);
+        updatePosition(_status.longitude, _status.latitude, _status.headingTrue);
 
         // check and load chart
         let aptCode = null;
