@@ -110,8 +110,8 @@ function updateStatus(dataChanged) {
         }
 
         _completedDist = Math.max(0, totalDist - _remainingDist);
-        update('valDistance', _remainingDist);
-        update('valTotalDist', totalDist);
+        update('valDistance', _completedDist);
+        update('valRemainingDist', _remainingDist);
 
         update('valAltitude', _status.altitude);
 
