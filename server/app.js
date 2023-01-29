@@ -44,8 +44,10 @@ app.get('/status', (req, res) => {
 
 app.get('/plan', (req, res) => {
     let sbId = config.get('simbriefId');
-    axios.get(`https://www.simbrief.com/api/xml.fetcher.php?userid=${sbId}`)
-        .then((resp) => {
+    axios.get(`https://www.simbrief.com/api/xml.fetcher.php?userid=${sbId}`,
+        {headers: {
+                'Accept-Encoding': 'gzip'
+            }}).then((resp) => {
             if (resp.status === 200 && resp.data.startsWith('<?xml')) {
                 xml2js.parseString(resp.data, (err, json) => {
                     if (err) {
@@ -54,10 +56,12 @@ app.get('/plan', (req, res) => {
                     return res.json(getFlightPlan(json));
                 });
             } else {
+                console.log(resp);
                 return res.json({code: 2});
             }
         })
         .catch((err) => {
+            console.log(err);
             res.json({code: 1, err: err.toString()});
         });
 });
