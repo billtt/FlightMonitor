@@ -99,10 +99,12 @@ function updateStatus(dataChanged) {
         if (_plan) {
             totalDist = getTotalDistFromPlan();
             _remainingDist = getRemainingDistFromPlan();
-            ete = _remainingDist / _status.GS * 3600;
         }
         totalDist += _distanceFix;
         _remainingDist += _distanceFix;
+        if (_plan) {
+            ete = _remainingDist / _status.GS * 3600;
+        }
 
         // make sure distance is not less than direct distance to destination
         if (_plan) {
