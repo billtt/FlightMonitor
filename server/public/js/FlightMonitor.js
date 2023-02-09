@@ -444,6 +444,7 @@ function drawFlightPlan() {
 
 function unloadPlan() {
     _plan = null;
+    removeChart();
     _map.clearOverlays();
     _distanceFix = 0;
     const btPlan = $('#btPlan');
