@@ -122,21 +122,21 @@ function loadChart(aptCode) {
     const img = new Image();
     img.onload = function() {
         _chartRatio = this.width / this.height;
+        // try loading existing data
+        $.getJSON('charts/' + aptCode + '.json', (data) => {
+            if (data && data.sw) {
+                addChart(new BMap.Point(data.sw[0], data.sw[1]), new BMap.Point(data.ne[0], data.ne[1]));
+            } else {
+                window.alert('Something wrong loading chart configuration.');
+            }
+        }).fail(()=>{
+            // add manually
+            _status = STATUS_ADDCHART_SW;
+            message('Now click on the southwest point on map');
+        });
     }
     img.src = 'charts/' + aptCode + '.png';
 
-    // try loading existing data
-    $.getJSON('charts/' + aptCode + '.json', (data) => {
-        if (data && data.sw) {
-            addChart(new BMap.Point(data.sw[0], data.sw[1]), new BMap.Point(data.ne[0], data.ne[1]));
-        } else {
-            window.alert('Something wrong loading chart configuration.');
-        }
-    }).fail(()=>{
-        // add manually
-        _status = STATUS_ADDCHART_SW;
-        message('Now click on the southwest point on map');
-    });
 }
 
 function addChart(p1, p2) {
