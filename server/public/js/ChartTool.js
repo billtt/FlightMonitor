@@ -14,9 +14,11 @@ let _chartRatio = 0;
 // staging variables
 let _stPoint = null;
 let _stBounds = null;
+let _mapMode = null;
 
 function init() {
     let startPoint = new BMap.Point(121.805278, 31.143333);
+    _mapMode = BMAP_NORMAL_MAP;
     _map = new BMap.Map("map");
     _map.enableScrollWheelZoom();
     _map.centerAndZoom(startPoint, 8);
@@ -28,6 +30,7 @@ function init() {
         'Press `r` for re-position mode.\n' +
         'Press `s` for scale mode.\n' +
         'Press `v` for normal mode.\n' +
+        'Press `m` to toggle map mode.\n' +
         'Press `p` to print bounds.');
 }
 
@@ -68,6 +71,16 @@ function onKeyDown(event) {
     if (key === 'v') {
         _status = STATUS_NORMAL;
         message('Normal Mode');
+    }
+    if (key === 'm') {
+        if (_mapMode === BMAP_NORMAL_MAP) {
+            _mapMode = BMAP_SATELLITE_MAP;
+            message('Satellite Mode');
+        } else {
+            _mapMode = BMAP_NORMAL_MAP;
+            message('Normal Mode');
+        }
+        _map.setMapType(_mapMode);
     }
     if (key === 'p' && _chart) {
         let sw = _chart.getBounds().getSouthWest();
