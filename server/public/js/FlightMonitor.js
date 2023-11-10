@@ -480,7 +480,7 @@ function loadMetar(domId) {
 
 function updateMetar(domId, metar) {
     let valid = metar && (metar.code === 0);
-    $('#valMetarTime' + domId).text(valid ? moment(metar.time).format('MM/DD HH:mm') : '-');
+    $('#valMetarTime' + domId).text(valid ? moment(metar.time).format('HH:mm') : '-');
     $('#fcatIndicator' + domId).removeClass('IFR LIFR VFR MVFR');
     if (valid) {
         let raw = metar.raw.substring(13);

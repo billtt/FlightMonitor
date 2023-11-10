@@ -76,7 +76,7 @@ app.get('/metar', (req, res) => {
     if (cache && (Date.now() - cache.queryTime.getTime() <= 600 * 1000)) {
         return res.json(cache);
     }
-    axios.get(`https://www.aviationweather.gov/adds/dataserver_current/httpparam?dataSource=metars&requestType=retrieve&format=xml&hoursBeforeNow=3&mostRecent=true&stationString=${icao}`)
+    axios.get(`https://aviationweather.gov/api/data/metar?ids=${icao}&format=xml&taf=false&hours=3`)
         .then((resp) => {
             if (resp.status === 200 && resp.data.startsWith('<?xml')) {
                 xml2js.parseString(resp.data, (err, json) => {
