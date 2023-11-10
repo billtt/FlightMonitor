@@ -371,7 +371,7 @@ function loadPlan() {
         drawFlightPlan();
         btPlan.text('Unload');
 
-        _metarInterval = setInterval(loadMetar, 60 * 1000);
+        _metarInterval = setInterval(loadMetars, 5 * 60 * 1000);
         loadMetars();
         initWholeZoom();
     });
