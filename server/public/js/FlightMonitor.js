@@ -329,7 +329,10 @@ function autoZoom() {
 function updatePosition(longitude, latitude, heading) {
     let pos = new google.maps.LatLng(latitude, longitude);
     _plane.setPosition(pos);
-    _plane.getIcon().rotation = heading + PLANE_ICON_ROTATION;
+    if (PLANE_ICON.rotation !== heading + PLANE_ICON_ROTATION) {
+        PLANE_ICON.rotation = heading + PLANE_ICON_ROTATION;
+        _plane.setIcon(PLANE_ICON);
+    }
     if (isAutoCenter() && !isJustDragged()) {
         _map.setCenter(pos);
         if (isAutoZoom()) {
