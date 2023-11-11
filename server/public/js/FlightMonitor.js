@@ -1,7 +1,6 @@
 /**
  * Created by billtt on 2021/11/30.
  */
-
 let _status = null;
 let _map = null;
 let _plane = null;
@@ -25,11 +24,11 @@ let _autoZooming = false;
 
 const NM2KM = 1.852;
 const FT2M = 0.3048;
-const DEFAULT_ZOOM = 12;
-const MAX_ZOOM = 15;
+const DEFAULT_ZOOM = 10;
 const MIN_WHOLEZOOM = 6;
 const CHART_DISTANCE = 5;
-const CHART_ZOOM = 16;
+const CHART_ZOOM = 15;
+const MAX_ZOOM = CHART_ZOOM;
 const PLANE_ICON_ROTATION = -90;
 const PLANE_ICON = {
     path: 'M186.62,464H160a16,16,0,0,1-14.57-22.6l64.46-142.25L113.1,297,77.8,339.77C71.07,348.23,65.7,352,52,352H34.08a17.66,17.66,0,0,1-14.7-7.06c-2.38-3.21-4.72-8.65-2.44-16.41l19.82-71c.15-.53.33-1.06.53-1.58a.38.38,0,0,0,0-.15,14.82,14.82,0,0,1-.53-1.59L16.92,182.76c-2.15-7.61.2-12.93,2.56-16.06a16.83,16.83,0,0,1,13.6-6.7H52c10.23,0,20.16,4.59,26,12l34.57,42.05,97.32-1.44-64.44-142A16,16,0,0,1,160,48h26.91a25,25,0,0,1,19.35,9.8l125.05,152,57.77-1.52c4.23-.23,15.95-.31,18.66-.31C463,208,496,225.94,496,256c0,9.46-3.78,27-29.07,38.16-14.93,6.6-34.85,9.94-59.21,9.94-2.68,0-14.37-.08-18.66-.31l-57.76-1.54-125.36,152A25,25,0,0,1,186.62,464Z',
@@ -197,7 +196,10 @@ async function init() {
     let startPoint = new google.maps.LatLng(31.143333, 121.805278);
     _map = new Map(document.getElementById("map"), {
         center: startPoint,
-        zoom: 12,
+        zoom: DEFAULT_ZOOM,
+        maxZoom: MAX_ZOOM,
+        streetViewControl: false,
+        mapTypeId: google.maps.MapTypeId.HYBRID
     });
 
     if (_debug) {
@@ -213,8 +215,9 @@ async function init() {
                         timestamp: Date.now()
                     };
                 }
-                _status.longitude = e.latLng.lng();
-                _status.latitude = e.latLng.lat();
+                let pos = gcj2wgs(e.latLng.lat(), e.latLng.lng());
+                _status.longitude = pos.lng;
+                _status.latitude = pos.lat;
                 updateStatus(true);
             }
         });
@@ -259,6 +262,31 @@ async function init() {
     setInterval(getStatus, 3000);
 }
 
+function calculateViewportZoom(pointsOrBounds) {
+    if (!pointsOrBounds || pointsOrBounds.length === 0) {
+        return DEFAULT_ZOOM;
+    }
+    let bounds = null;
+    if (pointsOrBounds instanceof google.maps.LatLngBounds) {
+        bounds = pointsOrBounds;
+    } else {
+        bounds = new google.maps.LatLngBounds();
+        for (let i=0; i<pointsOrBounds.length; i++) {
+            bounds.extend(pointsOrBounds[i]);
+        }
+    }
+    let currentZoom = _map.getZoom();
+    let currentBounds = _map.getBounds();
+    let rate = Math.max(bounds.toSpan().lat() / currentBounds.toSpan().lat(), bounds.toSpan().lng() / currentBounds.toSpan().lng());
+    let diff = Math.ceil(Math.log2(rate));
+    let zoom = currentZoom - diff;
+    if (_debug) {
+        console.log(`current zoom: ${currentZoom}, current span: ${currentBounds.toSpan()}, new span: ${bounds.toSpan()}, diff: ${diff}, new zoom: ${zoom}`);
+    }
+    zoom = Math.round(zoom);
+    return zoom;
+}
+
 function initWholeZoom() {
     if (!_plan || !_map) {
         _wholeZoom = DEFAULT_ZOOM;
@@ -267,15 +295,11 @@ function initWholeZoom() {
     let fixes = _plan.fixes;
     let bounds = new google.maps.LatLngBounds();
     for (let i=0; i<fixes.length; i++) {
-        bounds.extend(fixToLatLng(fixes[i]));
+        bounds.extend(fixToCorrectedLatLng(fixes[i]));
     }
-    let boundsListener = _map.addListener('bounds_changed', () => {
-        _wholeZoom = Math.max(MIN_WHOLEZOOM, _map.getZoom());
-        google.maps.event.removeListener(boundsListener);
-    });
-    let originalPos = _map.getCenter();
+    _wholeZoom = Math.max(MIN_WHOLEZOOM, calculateViewportZoom(bounds));
+    console.log(`whole zoom: ${_wholeZoom}`);
     _map.fitBounds(bounds);
-    _map.setCenter(originalPos);
 }
 
 /**
@@ -288,10 +312,10 @@ function getRemainingPoints() {
     let points = [];
     let fixes = _plan.fixes;
     if (!_plan.currentFixIndex) {
-        points.push(fixToLatLng(fixes[fixes.length-1]));
+        points.push(fixToCorrectedLatLng(fixes[fixes.length-1]));
     } else {
         for (let i=_plan.currentFixIndex; i<fixes.length; i++) {
-            points.push(fixToLatLng(fixes[i]));
+            points.push(fixToCorrectedLatLng(fixes[i]));
         }
     }
     return points;
@@ -305,7 +329,11 @@ function autoZoom() {
     const endSegment = 200;
     let zoom = _map.getZoom();
     if (_remainingDist < endSegment) {
-        zoom = Math.round(MAX_ZOOM + (_wholeZoom - MAX_ZOOM) * _remainingDist / endSegment);
+        let planePoint = {lat: _status.latitude, lng: _status.longitude};
+        let points = getRemainingPoints();
+        points.push(planePoint);
+        zoom = calculateViewportZoom(points) - 1;
+        zoom = Math.min(zoom, Math.round(MAX_ZOOM + (_wholeZoom - MAX_ZOOM) * _remainingDist / endSegment));
     } else if (_completedDist < startSegment) {
         zoom = Math.round(MAX_ZOOM + (_wholeZoom - MAX_ZOOM) * _completedDist / startSegment);
     } else {
@@ -327,7 +355,7 @@ function autoZoom() {
 }
 
 function updatePosition(longitude, latitude, heading) {
-    let pos = new google.maps.LatLng(latitude, longitude);
+    let pos = wgs2gcj(latitude, longitude);
     _plane.setPosition(pos);
     if (PLANE_ICON.rotation !== heading + PLANE_ICON_ROTATION) {
         PLANE_ICON.rotation = heading + PLANE_ICON_ROTATION;
@@ -406,7 +434,7 @@ function drawFlightRoutes() {
 
     let points = [];
     for (let i=0; i<fixes.length; i++) {
-        points.push(fixToLatLng(fixes[i]));
+        points.push(fixToCorrectedLatLng(fixes[i]));
     }
     for (let i=0; i<points.length; i++) {
         let point = points[i];
@@ -432,7 +460,7 @@ function drawFlightRoutes() {
         if (i > 0 && i < fixes.length-1 && !fix.sidStar) {
             // let name = (fix.id === fix.name ? fix.name : (`(${fix.id}) ${fix.name}`));
             let wpt = new google.maps.Marker({
-                position: fixToLatLng(fix),
+                position: fixToCorrectedLatLng(fix),
                 icon: WPT_ICON,
                 map: _map
             });
@@ -527,8 +555,8 @@ function closeMetar() {
 /**
  * Convert fix to LatLng obj
  */
-function fixToLatLng(fix) {
-    return {lng: fix.long, lat: fix.lat};
+function fixToCorrectedLatLng(fix) {
+    return wgs2gcj(fix.lat, fix.long);
 }
 
 function getTotalDistFromPlan() {
@@ -577,13 +605,15 @@ function loadChart(aptCode) {
             _unavailableCharts.push(aptCode);
             return;
         }
+        let ne = wgs2gcj(data.ne[1], data.ne[0]);
+        let sw = wgs2gcj(data.sw[1], data.sw[0]);
         let bounds = {
-            north: data.ne[1],
-            south: data.sw[1],
-            west: data.sw[0],
-            east: data.ne[0]
+            north: ne.lat,
+            south: sw.lat,
+            west: sw.lng,
+            east: ne.lng
         };
-        _chart = new google.maps.GroundOverlay('charts/' + aptCode + '.png', bounds);
+        _chart = new google.maps.GroundOverlay('charts/' + aptCode + '.png', bounds, {opacity: 0.7});
         _chart.code = aptCode;
         _chart.setMap(_map);
     }).fail(()=>{
