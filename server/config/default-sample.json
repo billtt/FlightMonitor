@@ -1,5 +1,5 @@
 {
-  "ak": "YOUR-AK-CODE-FROM-BAIDU-DEVELOPER-CONSOLE",
   "simbriefId": "YOUR-SIMBRIEF-NUMERIC-ID",
+  "gmapsApiKey": "YOUR-GOOGLE-MAPS-API-KEY",
   "debug": false
 }

@@ -24,12 +24,12 @@ app.post('/', (req, res) => {
 });
 
 app.get('/', (req, res) => {
-    res.locals.ak = config.get('ak');
     let debug = config.get('debug');
     if (debug == null) {
         debug = false;
     }
     res.locals.debug = debug;
+    res.locals.gmapsApiKey = config.get('gmapsApiKey');
     res.render('index');
 });
 

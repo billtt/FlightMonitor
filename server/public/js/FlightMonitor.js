@@ -15,6 +15,7 @@ let _completedDist = 0;
 let _debug = false;
 let _lastDragTime = 0;
 let _unavailableCharts = [];
+let _routes = [];
 
 // fix of remaining distance
 let _distanceFix = 0;
@@ -24,10 +25,30 @@ let _autoZooming = false;
 
 const NM2KM = 1.852;
 const FT2M = 0.3048;
-const DEFAULT_ZOOM = 8;
-const MIN_WHOLEZOOM = 7;
+const DEFAULT_ZOOM = 12;
+const MAX_ZOOM = 15;
+const MIN_WHOLEZOOM = 6;
 const CHART_DISTANCE = 5;
 const CHART_ZOOM = 16;
+const PLANE_ICON_ROTATION = -90;
+const PLANE_ICON = {
+    path: 'M186.62,464H160a16,16,0,0,1-14.57-22.6l64.46-142.25L113.1,297,77.8,339.77C71.07,348.23,65.7,352,52,352H34.08a17.66,17.66,0,0,1-14.7-7.06c-2.38-3.21-4.72-8.65-2.44-16.41l19.82-71c.15-.53.33-1.06.53-1.58a.38.38,0,0,0,0-.15,14.82,14.82,0,0,1-.53-1.59L16.92,182.76c-2.15-7.61.2-12.93,2.56-16.06a16.83,16.83,0,0,1,13.6-6.7H52c10.23,0,20.16,4.59,26,12l34.57,42.05,97.32-1.44-64.44-142A16,16,0,0,1,160,48h26.91a25,25,0,0,1,19.35,9.8l125.05,152,57.77-1.52c4.23-.23,15.95-.31,18.66-.31C463,208,496,225.94,496,256c0,9.46-3.78,27-29.07,38.16-14.93,6.6-34.85,9.94-59.21,9.94-2.68,0-14.37-.08-18.66-.31l-57.76-1.54-125.36,152A25,25,0,0,1,186.62,464Z',
+    anchor: {x: 256, y: 256},
+    scale: 0.08,
+    fillColor: "#ff9d00",
+    fillOpacity: 0.8,
+    strokeColor: "#ffd48f",
+    strokeWeight: 1,
+    rotation: PLANE_ICON_ROTATION
+};
+const WPT_ICON = {
+    path: 'M 8, 8 m -8, 0 a 8,8 0 1,0 16,0 a 8,8 0 1,0 -16,0',
+    anchor: {x: 8, y: 8},
+    scale: 1.0,
+    fillColor: "red",
+    fillOpacity: 0.6,
+    strokeWeight: 0
+};
 
 function getStatus() {
     $.getJSON('/status', (data) => {
@@ -168,36 +189,43 @@ function updateStatus(dataChanged) {
     }
 }
 
-function init() {
-    _rawConvertor = new BMap.Convertor();
+async function init() {
+
+    const { Map } = await google.maps.importLibrary("maps");
 
     // set start point at ZSPD
-    let startPoint = new BMap.Point(121.805278, 31.143333);
-    _map = new BMap.Map("map");
-    _map.enableScrollWheelZoom();
-    _map.centerAndZoom(startPoint, DEFAULT_ZOOM);
-    _map.addEventListener('dragend', onMapDragged);
-    _map.addEventListener('zoomstart', onZoomStart);
-    _map.addEventListener('zoomend', onZoomEnd);
+    let startPoint = new google.maps.LatLng(31.143333, 121.805278);
+    _map = new Map(document.getElementById("map"), {
+        center: startPoint,
+        zoom: 12,
+    });
 
     if (_debug) {
-        _map.addEventListener('click', (params)=>{
-            let p = params.point;
-            if (_status) {
-                _status.longitude = p.lng;
-                _status.latitude = p.lat;
+        _map.addListener('click', (e)=>{
+            if (e.latLng) {
+                if (!_status) {
+                    _status = {
+                        headingTrue: 0,
+                        GS: 400,
+                        IAS: 290,
+                        altitude: 30000,
+                        ETE: 0,
+                        timestamp: Date.now()
+                    };
+                }
+                _status.longitude = e.latLng.lng();
+                _status.latitude = e.latLng.lat();
                 updateStatus(true);
             }
         });
     }
 
-    let nav = new BMap.NavigationControl({type: BMAP_NAVIGATION_CONTROL_ZOOM, anchor: BMAP_ANCHOR_BOTTOM_RIGHT});
-    _map.addControl(nav);
-
-    let icon = new BMap.Icon('img/plane.png', new BMap.Size(40, 40), {anchor: new BMap.Size(20, 20)});
-    _plane = new BMap.Marker(startPoint, {icon: icon, enableMassClear: false});
-    _plane.setTop(true);
-    _map.addOverlay(_plane);
+    let planeUrl = 'img/plane.png';
+    _plane = new google.maps.Marker({
+        position: startPoint,
+        icon: PLANE_ICON,
+        map: _map
+    });
 
     $('#chkAutoCenter').change(() => {
         if (isAutoCenter()) {
@@ -236,16 +264,22 @@ function initWholeZoom() {
         _wholeZoom = DEFAULT_ZOOM;
         return;
     }
-    let view = [];
     let fixes = _plan.fixes;
+    let bounds = new google.maps.LatLngBounds();
     for (let i=0; i<fixes.length; i++) {
-        view.push(fixToBMapPoint(fixes[i]));
+        bounds.extend(fixToLatLng(fixes[i]));
     }
-    _wholeZoom = Math.max(MIN_WHOLEZOOM, _map.getViewport(view).zoom);
+    let boundsListener = _map.addListener('bounds_changed', () => {
+        _wholeZoom = Math.max(MIN_WHOLEZOOM, _map.getZoom());
+        google.maps.event.removeListener(boundsListener);
+    });
+    let originalPos = _map.getCenter();
+    _map.fitBounds(bounds);
+    _map.setCenter(originalPos);
 }
 
 /**
- * Return array of remaining points on route as BMap.Point
+ * Return array of remaining points on route as LatLng object
  */
 function getRemainingPoints() {
     if (!_plan) {
@@ -254,10 +288,10 @@ function getRemainingPoints() {
     let points = [];
     let fixes = _plan.fixes;
     if (!_plan.currentFixIndex) {
-        points.push(fixToBMapPoint(fixes[fixes.length-1]));
+        points.push(fixToLatLng(fixes[fixes.length-1]));
     } else {
         for (let i=_plan.currentFixIndex; i<fixes.length; i++) {
-            points.push(fixToBMapPoint(fixes[i]));
+            points.push(fixToLatLng(fixes[i]));
         }
     }
     return points;
@@ -267,27 +301,17 @@ function autoZoom() {
     if (!_plan || !_map || !_plane) {
         return;
     }
-    const maxZoom = 15;
     const startSegment = 50;
     const endSegment = 200;
-    let zoom = 0;
+    let zoom = _map.getZoom();
     if (_remainingDist < endSegment) {
-        // let destApt = _plan.fixes[_plan.fixes.length - 1];
-        // let destPoint = new BMap.Point(destApt.long, destApt.lat);
-        let planePoint = new BMap.Point(_status.longitude, _status.latitude);
-        // let oppPoint = new BMap.Point(2 * planePoint.lng - destPoint.lng, 2 * planePoint.lat - destPoint.lat);
-        // let view = [destPoint, planePoint, oppPoint];
-        // zoom = _map.getViewport(view, {margins: [20, 20, 20, 20]}).zoom;
-        let view = getRemainingPoints();
-        view.push(planePoint);
-        zoom = _map.getViewport(view, {zoomFactor: -1}).zoom;
-        zoom = Math.min(zoom, Math.round(maxZoom + (_wholeZoom - maxZoom) * _remainingDist / endSegment));
+        zoom = Math.round(MAX_ZOOM + (_wholeZoom - MAX_ZOOM) * _remainingDist / endSegment);
     } else if (_completedDist < startSegment) {
-        zoom = Math.round(maxZoom + (_wholeZoom - maxZoom) * _completedDist / startSegment);
+        zoom = Math.round(MAX_ZOOM + (_wholeZoom - MAX_ZOOM) * _completedDist / startSegment);
     } else {
         zoom = _wholeZoom;
     }
-    zoom = Math.min(zoom, maxZoom);
+    zoom = Math.min(zoom, MAX_ZOOM);
 
     // set zoom for chart
     if (_chart) {
@@ -303,20 +327,15 @@ function autoZoom() {
 }
 
 function updatePosition(longitude, latitude, heading) {
-    let pos = new BMap.Point(longitude, latitude);
-    _rawConvertor.translate([pos], 1, 5, (data) => {
-        if (data.status === 0) {
-            let tPoint = data.points[0];
-            _plane.setPosition(tPoint);
-            _plane.setRotation(heading);
-            if (isAutoCenter() && !isJustDragged()) {
-                _map.setCenter(tPoint, {noAnimation: true});
-                if (isAutoZoom()) {
-                    autoZoom();
-                }
-            }
+    let pos = new google.maps.LatLng(latitude, longitude);
+    _plane.setPosition(pos);
+    _plane.getIcon().rotation = heading + PLANE_ICON_ROTATION;
+    if (isAutoCenter() && !isJustDragged()) {
+        _map.setCenter(pos);
+        if (isAutoZoom()) {
+            autoZoom();
         }
-    });
+    }
 }
 
 function onZoomEnd() {
@@ -368,7 +387,7 @@ function loadPlan() {
         }
         _plan = data;
         _distanceFix = 0;
-        drawFlightPlan();
+        drawFlightRoutes();
         btPlan.text('Unload');
 
         _metarInterval = setInterval(loadMetars, 5 * 60 * 1000);
@@ -377,75 +396,78 @@ function loadPlan() {
     });
 }
 
-function drawFlightPlan() {
+function drawFlightRoutes() {
     const fixes = _plan.fixes;
     let routeType = 0; // 0 - sid, 1 - normal, 2 - star
     let routes = [[], [], []];
-    const wptIcon = new BMap.Icon('img/wpt.png', new BMap.Size(20, 20), {anchor: new BMap.Size(10, 10)});
 
-    // convert coordinates
     let points = [];
     for (let i=0; i<fixes.length; i++) {
-        points.push(fixToBMapPoint(fixes[i]));
+        points.push(fixToLatLng(fixes[i]));
     }
-    new MapConvertor(_rawConvertor, points, (data) => {
-        if (data.status === 0 && data.points.length === fixes.length) {
-            for (let i=0; i<data.points.length; i++) {
-                let point = data.points[i];
-                let fix = fixes[i];
-                // add points to routes
-                routes[routeType].push(point);
-                if (i > 0 && i < fixes.length-1) {
-                    if (!fix.sidStar && routeType === 0) {
-                        routes[1].push(point);
-                        routeType = 1;
-                    }
-                    if (fix.sidStar && routeType === 1) {
-                        // remote last point from Normal route
-                        routes[1].pop();
-                        // add last point from Normal route
-                        routes[2].push(routes[1][routes[1].length-1]);
-                        routes[2].push(point);
-                        routeType = 2;
-                    }
-                }
-
-                // add markers and skip airports, SID and STAR for waypoints
-                if (i > 0 && i < fixes.length-1 && !fix.sidStar) {
-                    let name = (fix.id === fix.name ? fix.name : (`(${fix.id}) ${fix.name}`));
-                    let wpt = new BMap.Marker(point, {icon: wptIcon, title: name});
-                    _map.addOverlay(wpt);
-                }
+    for (let i=0; i<points.length; i++) {
+        let point = points[i];
+        let fix = fixes[i];
+        // add points to routes
+        routes[routeType].push(point);
+        if (i > 0 && i < fixes.length-1) {
+            if (!fix.sidStar && routeType === 0) {
+                routes[1].push(point);
+                routeType = 1;
             }
-
-            // draw routes
-            const options = [
-                {color: 'orange', style: 'dashed', opacity: 0.5}, // SID
-                {color: 'red', style: 'solid', opacity: 0.3}, // Normal
-                {color: 'orange', style: 'dashed', opacity: 0.5} // STAR
-            ];
-            for (let i=0; i<3; i++) {
-                if (routes[i].length > 1) {
-                    _map.addOverlay(new BMap.Polyline(routes[i], {
-                        strokeColor: options[i].color,
-                        strokeStyle: options[i].style,
-                        strokeOpacity: options[i].opacity,
-                        strokeWeight: 8
-                    }));
-                }
+            if (fix.sidStar && routeType === 1) {
+                // remote last point from Normal route
+                routes[1].pop();
+                // add last point from Normal route
+                routes[2].push(routes[1][routes[1].length-1]);
+                routes[2].push(point);
+                routeType = 2;
             }
-
-        } else {
-            alert('Error converting coordinates for plan!');
-            return;
         }
-    }).convert();
+
+        // add markers and skip airports, SID and STAR for waypoints
+        if (i > 0 && i < fixes.length-1 && !fix.sidStar) {
+            // let name = (fix.id === fix.name ? fix.name : (`(${fix.id}) ${fix.name}`));
+            let wpt = new google.maps.Marker({
+                position: fixToLatLng(fix),
+                icon: WPT_ICON,
+                map: _map
+            });
+            _routes.push(wpt);
+        }
+    }
+
+    // draw routes
+    const options = [
+        {color: 'orange', opacity: 0.5}, // SID
+        {color: 'red', opacity: 0.3}, // Normal
+        {color: 'orange', opacity: 0.5} // STAR
+    ];
+    for (let i=0; i<3; i++) {
+        if (routes[i].length > 1) {
+            let path = new google.maps.Polyline({
+                path: routes[i],
+                geodesic: true,
+                strokeColor: options[i].color,
+                strokeOpacity: options[i].opacity,
+                strokeWeight: 8,
+            });
+            path.setMap(_map);
+            _routes.push(path);
+        }
+    }
+}
+
+function cleanRoutes() {
+    for (let i=0; i<_routes.length; i++) {
+        _routes[i].setMap(null);
+    }
 }
 
 function unloadPlan() {
     _plan = null;
     removeChart();
-    _map.clearOverlays();
+    cleanRoutes();
     _distanceFix = 0;
     const btPlan = $('#btPlan');
     btPlan.text('Load');
@@ -500,10 +522,10 @@ function closeMetar() {
 }
 
 /**
- * Convert fix to BMap.Point
+ * Convert fix to LatLng obj
  */
-function fixToBMapPoint(fix) {
-    return new BMap.Point(fix.long, fix.lat);
+function fixToLatLng(fix) {
+    return {lng: fix.long, lat: fix.lat};
 }
 
 function getTotalDistFromPlan() {
@@ -538,7 +560,7 @@ function getRemainingDistFromPlan() {
 
 function removeChart() {
     if (_chart) {
-        _map.removeOverlay(_chart);
+        _chart.setMap(null);
         _chart = null;
     }
 }
@@ -552,16 +574,15 @@ function loadChart(aptCode) {
             _unavailableCharts.push(aptCode);
             return;
         }
-        let bounds = new BMap.Bounds(
-            new BMap.Point(data.sw[0], data.sw[1]),
-            new BMap.Point(data.ne[0], data.ne[1])
-        );
-        _chart = new BMap.GroundOverlay(bounds, {
-            imageURL: 'charts/' + aptCode + '.png',
-            opacity: 0.5
-        });
+        let bounds = {
+            north: data.ne[1],
+            south: data.sw[1],
+            west: data.sw[0],
+            east: data.ne[0]
+        };
+        _chart = new google.maps.GroundOverlay('charts/' + aptCode + '.png', bounds);
         _chart.code = aptCode;
-        _map.addOverlay(_chart);
+        _chart.setMap(_map);
     }).fail(()=>{
         _unavailableCharts.push(aptCode);
     });
