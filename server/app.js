@@ -34,7 +34,7 @@ app.get('/', (req, res) => {
 });
 
 app.get('/chart-tool', (req, res) => {
-    res.locals.ak = config.get('ak');
+    res.locals.gmapsApiKey = config.get('gmapsApiKey');
     res.render('ChartTool');
 });
 
