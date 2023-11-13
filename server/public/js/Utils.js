@@ -90,3 +90,7 @@ function getDisplayTimeSpan(seconds) {
     }
     return dispSpan;
 }
+
+function latLng2Literal(p) {
+    return {lat: p.lat(), lng: p.lng()};
+}

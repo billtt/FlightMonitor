@@ -16,7 +16,7 @@ let _chartRatio = 0;
 // staging variables
 let _stPoint = null;
 let _stBounds = null;
-let _mapMode = null;
+let _mouseStart = null;
 
 async function init() {
     const { Map } = await google.maps.importLibrary("maps");
@@ -29,13 +29,15 @@ async function init() {
         mapTypeId: google.maps.MapTypeId.HYBRID
     });
     _map.addListener('click', onClick);
-    _map.addListener('dragstart', onDragStart);
-    _map.addListener('drag', onDragging);
+    _map.addListener('mouseup', onMouseUp);
+    _map.addListener('mousedown', onMouseDown);
+    _map.addListener('mousemove', onMouseMove);
     window.addEventListener('keydown', onKeyDown);
     message('Press `l` to load chart.\n' +
         'Press `r` for re-position mode.\n' +
         'Press `s` for scale mode.\n' +
         'Press `v` for normal mode.\n' +
+        'Press `a` to adjust aspect ratio (to conform to image).\n' +
         'Press `p` to print bounds.');
 }
 
@@ -53,12 +55,48 @@ function onClick(e) {
     }
 }
 
+function onMouseDown(e) {
+    if (_status === STATUS_REPOSITION || _status === STATUS_SCALE) {
+        _mouseStart = latLng2Literal(e.latLng);
+        _stBounds = _chart.getBounds();
+    }
+}
+
+function onMouseUp(e) {
+    if (_status === STATUS_REPOSITION || _status === STATUS_SCALE) {
+        _mouseStart = null;
+    }
+}
+
+function onMouseMove(e) {
+    if (!_mouseStart) {
+        return;
+    }
+    let p = latLng2Literal(e.latLng);
+    let offset = {lng: p.lng - _mouseStart.lng, lat: p.lat - _mouseStart.lat};
+    if (_status === STATUS_REPOSITION && _chart) {
+        let sw = _stBounds.getSouthWest();
+        sw = {lng: sw.lng() + offset.lng, lat: sw.lat() + offset.lat};
+        let ne = _stBounds.getNorthEast();
+        ne = {lng: ne.lng() + offset.lng, lat: ne.lat() + offset.lat};
+        setChartBounds(sw, ne);
+    } else if (_status === STATUS_SCALE && _chart) {
+        let sw = _stBounds.getSouthWest();
+        let ne = _stBounds.getNorthEast();
+        let scale = 1 + offset.lat / (ne.lat() - sw.lat());
+        let nsw = {lng: _mouseStart.lng + (sw.lng() - _mouseStart.lng) * scale, lat: _mouseStart.lat + (sw.lat() - _mouseStart.lat) * scale};
+        let nne = {lng: _mouseStart.lng + (ne.lng() - _mouseStart.lng) * scale, lat: _mouseStart.lat + (ne.lat() - _mouseStart.lat) * scale};
+        setChartBounds(nsw, nne);
+    }
+}
+
 function onKeyDown(event) {
     let key = event.key;
     if (key === 'l') {
         let code = window.prompt('Airport ICAO code:', '');
         if (code.match(/^[A-Z]{4}$/)) {
             loadChart(code);
+            _map.setOptions({gestureHandling: 'auto'});
         } else {
             window.alert('Invalid ICAO code!');
         }
@@ -67,6 +105,7 @@ function onKeyDown(event) {
         if (_chart) {
             _status = STATUS_REPOSITION;
             _stPoint = null;
+            _map.setOptions({gestureHandling: 'none'});
             message('Re-position Mode');
         }
     }
@@ -74,13 +113,24 @@ function onKeyDown(event) {
         if (_chart) {
             _status = STATUS_SCALE;
             _stPoint = null;
+            _map.setOptions({gestureHandling: 'none'});
             message('Scale Mode\nMove map vertically to scale.');
         }
     }
     if (key === 'v') {
         _status = STATUS_NORMAL;
         _stPoint = null;
+        _map.setOptions({gestureHandling: 'auto'});
         message('Normal Mode');
+    }
+    if (key === 'a') {
+        if (_chart) {
+            let bounds = _chart.getBounds();
+            let sw = latLng2Literal(bounds.getSouthWest());
+            let ne = latLng2Literal(bounds.getNorthEast());
+            adjustRatio(sw, ne);
+            setChartBounds(sw, ne);
+        }
     }
     if (key === 'p' && _chart) {
         let bounds = _chart.getBounds();
@@ -95,34 +145,6 @@ function onKeyDown(event) {
         }
         message('Chart config:\n' +
             JSON.stringify(json, null, 4));
-    }
-}
-
-function onDragStart(event) {
-    if ((_status === STATUS_REPOSITION || _status === STATUS_SCALE) && _chart) {
-        _stPoint = _map.getCenter();
-        _stBounds = _chart.getBounds();
-    }
-}
-
-function onDragging(event) {
-    let center = _map.getCenter();
-    let offset = null;
-    if (_stPoint) {
-        offset = {lng: center.lng() - _stPoint.lng(), lat: center.lat() - _stPoint.lat()};
-    }
-    if (_status === STATUS_REPOSITION && _chart) {
-        let sw = _stBounds.getSouthWest();
-        sw = {lng: sw.lng() + offset.lng, lat: sw.lat() + offset.lat};
-        let ne = _stBounds.getNorthEast();
-        ne = {lng: ne.lng() + offset.lng, lat: ne.lat() + offset.lat};
-        setChartBounds(sw, ne);
-    } else if (_status === STATUS_SCALE && _chart) {
-        let sw = _stBounds.getSouthWest();
-        let ne = _stBounds.getNorthEast();
-        let scale = 1 - offset.lat / (ne.lat() - sw.lat());
-        let nne = {lng: sw.lng() + (ne.lng() - sw.lng()) * scale, lat: sw.lat() + (ne.lat() - sw.lat()) * scale};
-        setChartBounds(sw, nne);
     }
 }
 
@@ -144,7 +166,11 @@ function loadChart(aptCode) {
         // try loading existing data
         $.getJSON('charts/' + aptCode + '.json', (data) => {
             if (data && data.sw) {
-                addChartByWgs({lng: data.sw[0], lat: data.sw[1]}, {lng: data.ne[0], lat: data.ne[1]});
+                // adjust ratio
+                let p1 = {lng: data.sw[0], lat: data.sw[1]};
+                let p2 = {lng: data.ne[0], lat: data.ne[1]};
+                addChartByWgs(p1, p2);
+                _map.fitBounds(_chart.getBounds());
             } else {
                 window.alert('Something wrong loading chart configuration.');
             }
@@ -163,7 +189,7 @@ function setChartBounds(sw, ne) {
         _chart.setMap(null);
     }
     let bounds = new google.maps.LatLngBounds(sw, ne);
-    _chart = new google.maps.GroundOverlay('charts/' + _chartCode + '.png', bounds, {opacity: 0.4});
+    _chart = new google.maps.GroundOverlay('charts/' + _chartCode + '.png', bounds, {opacity: 0.5, clickable: false});
     _chart.setMap(_map);
 }
 
@@ -197,8 +223,8 @@ function projectedAr(sw, ne) {
 
 /**
  * p2 will be modified to conform to _chartRatio
- * @param p1
- * @param p2
+ * @param p1 LatLngLiteral
+ * @param p2 LatLngLiteral
  */
 function adjustRatio(p1, p2) {
     let width = p2.lng - p1.lng;
