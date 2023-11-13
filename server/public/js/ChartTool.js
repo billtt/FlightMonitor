@@ -42,7 +42,7 @@ async function init() {
 }
 
 function onClick(e) {
-    let p = gcj2wgs(e.latLng.lat(), e.latLng.lng());
+    let p = latLng2Literal(e.latLng);
     if (_status === STATUS_ADDCHART_SW) {
         _stPoint = p;
         _status++;
@@ -134,14 +134,11 @@ function onKeyDown(event) {
     }
     if (key === 'p' && _chart) {
         let bounds = _chart.getBounds();
-        console.log(bounds.south, bounds.west, bounds.north, bounds.east);
         let sw = bounds.getSouthWest();
-        sw = gcj2wgs(sw.lat(), sw.lng());
         let ne = bounds.getNorthEast();
-        ne = gcj2wgs(ne.lat(), ne.lng());
         let json = {
-            sw: [sw.lng, sw.lat],
-            ne: [ne.lng, ne.lat]
+            sw: [sw.lng(), sw.lat()],
+            ne: [ne.lng(), ne.lat()]
         }
         message('Chart config:\n' +
             JSON.stringify(json, null, 4));
@@ -194,8 +191,6 @@ function setChartBounds(sw, ne) {
 }
 
 function addChartByWgs(p1, p2) {
-    p1 = wgs2gcj(p1.lat, p1.lng);
-    p2 = wgs2gcj(p2.lat, p2.lng);
     adjustRatio(p1, p2);
     setChartBounds(p1, p2);
 }

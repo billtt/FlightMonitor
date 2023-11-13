@@ -49,6 +49,20 @@ const WPT_ICON = {
     strokeWeight: 0
 };
 
+// use adapter to determine whether to use conversion according to map type
+// todo: use conversion if map type is normal
+function wgs2gcjAdapter(lat, lng) {
+    return {lat: lat, lng: lng};
+    // return wgs2gcj(lat, lng);
+}
+
+// use adapter to determine whether to use conversion according to map type
+// todo: use conversion if map type is normal
+function gcj2wgsAdapter(lat, lng) {
+    return {lat: lat, lng: lng};
+    // return gcj2wgs(lat, lng);
+}
+
 function getStatus() {
     $.getJSON('/status', (data) => {
         if (data && data.timestamp) {
@@ -215,7 +229,7 @@ async function init() {
                         timestamp: Date.now()
                     };
                 }
-                let pos = gcj2wgs(e.latLng.lat(), e.latLng.lng());
+                let pos = gcj2wgsAdapter(e.latLng.lat(), e.latLng.lng());
                 _status.longitude = pos.lng;
                 _status.latitude = pos.lat;
                 updateStatus(true);
@@ -355,7 +369,7 @@ function autoZoom() {
 }
 
 function updatePosition(longitude, latitude, heading) {
-    let pos = wgs2gcj(latitude, longitude);
+    let pos = wgs2gcjAdapter(latitude, longitude);
     _plane.setPosition(pos);
     if (PLANE_ICON.rotation !== heading + PLANE_ICON_ROTATION) {
         PLANE_ICON.rotation = heading + PLANE_ICON_ROTATION;
@@ -556,7 +570,7 @@ function closeMetar() {
  * Convert fix to LatLng obj
  */
 function fixToCorrectedLatLng(fix) {
-    return wgs2gcj(fix.lat, fix.long);
+    return wgs2gcjAdapter(fix.lat, fix.long);
 }
 
 function getTotalDistFromPlan() {
@@ -605,8 +619,8 @@ function loadChart(aptCode) {
             _unavailableCharts.push(aptCode);
             return;
         }
-        let ne = wgs2gcj(data.ne[1], data.ne[0]);
-        let sw = wgs2gcj(data.sw[1], data.sw[0]);
+        let ne = wgs2gcjAdapter(data.ne[1], data.ne[0]);
+        let sw = wgs2gcjAdapter(data.sw[1], data.sw[0]);
         let bounds = {
             north: ne.lat,
             south: sw.lat,
