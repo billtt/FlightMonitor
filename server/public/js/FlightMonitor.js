@@ -7,7 +7,6 @@ let _plane = null;
 let _plan = null;
 let _chart = null;
 let _metarInterval = null;
-let _rawConvertor = null;
 let _wholeZoom = 8;
 let _remainingDist = 0;
 let _completedDist = 0;
@@ -216,6 +215,9 @@ async function init() {
         mapTypeId: google.maps.MapTypeId.HYBRID
     });
 
+    _map.addListener('zoom_changed', onZoomChanged);
+    _map.addListener('drag', onMapDragging);
+
     if (_debug) {
         _map.addListener('click', (e)=>{
             if (e.latLng) {
@@ -383,22 +385,16 @@ function updatePosition(longitude, latitude, heading) {
     }
 }
 
-function onZoomEnd() {
+function onZoomChanged() {
     if (_debug) {
         console.log(`Zoom changed: ${_map.getZoom()}`);
-    }
-}
-
-function onZoomStart() {
-    if (_debug) {
-        console.log(`Zoom start, auto: ${_autoZooming}`);
     }
     if (!_autoZooming) {
         _lastDragTime = Date.now();
     }
 }
 
-function onMapDragged() {
+function onMapDragging() {
     _lastDragTime = Date.now();
 }
 
