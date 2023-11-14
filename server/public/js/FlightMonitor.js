@@ -243,6 +243,8 @@ async function init() {
     _plane = new google.maps.Marker({
         position: startPoint,
         icon: PLANE_ICON,
+        clickable: false,
+        zIndex: google.maps.Marker.MAX_ZINDEX + 1,
         map: _map
     });
 
@@ -472,6 +474,7 @@ function drawFlightRoutes() {
             let wpt = new google.maps.Marker({
                 position: fixToCorrectedLatLng(fix),
                 icon: WPT_ICON,
+                clickable: false,
                 map: _map
             });
             _routes.push(wpt);
@@ -492,6 +495,7 @@ function drawFlightRoutes() {
                 strokeColor: options[i].color,
                 strokeOpacity: options[i].opacity,
                 strokeWeight: 8,
+                clickable: false
             });
             path.setMap(_map);
             _routes.push(path);
@@ -623,7 +627,12 @@ function loadChart(aptCode) {
             west: sw.lng,
             east: ne.lng
         };
-        _chart = new google.maps.GroundOverlay('charts/' + aptCode + '.png', bounds, {opacity: 0.7});
+        _chart = new google.maps.GroundOverlay(
+            'charts/' + aptCode + '.png',
+            bounds, {
+                opacity: 0.7,
+                clickable: false
+            });
         _chart.code = aptCode;
         _chart.setMap(_map);
     }).fail(()=>{
