@@ -6,6 +6,7 @@ const app = express();
 const config = require('config');
 const axios = require('axios').default;
 const xml2js = require('xml2js');
+const https = require('https');
 
 let _status = {};
 const metarCache = {};
@@ -44,10 +45,14 @@ app.get('/status', (req, res) => {
 
 app.get('/plan', (req, res) => {
     let sbId = config.get('simbriefId');
+    const agent = new https.Agent({
+        // skip checking the certificate from simbrief server
+        rejectUnauthorized: false
+    });
     axios.get(`https://www.simbrief.com/api/xml.fetcher.php?userid=${sbId}`,
         {headers: {
                 'Accept-Encoding': 'gzip'
-            }}).then((resp) => {
+            }, httpsAgent: agent}).then((resp) => {
             if (resp.status === 200 && resp.data.startsWith('<?xml')) {
                 xml2js.parseString(resp.data, (err, json) => {
                     if (err) {
