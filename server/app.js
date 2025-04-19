@@ -194,12 +194,7 @@ function getMetar(raw) {
 function start() {
     // check port argument
     const argv = process.argv;
-    let port = 3000;
-    if (argv.length < 3 || isNaN(parseInt(argv[2]))) {
-        console.log('Port number not specified, using default (3000).');
-    } else {
-        port = parseInt(argv[2]);
-    }
+    let port = process.env.PORT || 3000;
     app.listen(port, () => {
         console.log(`Listening at port ${port}`);
     });
