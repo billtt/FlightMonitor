@@ -11,6 +11,7 @@ const https = require('https');
 let _status = {};
 const metarCache = {};
 const atisCache = {};
+const timezoneCache = {};
 
 const WEATHER_CACHE_MS = 10 * 60 * 1000;
 const ATIS_CACHE_MS = 5 * 60 * 1000;
@@ -132,6 +133,42 @@ app.get('/atis', (req, res) => {
     });
 });
 
+app.get('/timezone', (req, res) => {
+    const lat = Number(req.query.lat);
+    const long = Number(req.query.long);
+    if (!isValidCoordinates(lat, long)) {
+        return res.json({code: 1, err: 'Invalid coordinates'});
+    }
+    const cacheKey = `${lat.toFixed(2)},${long.toFixed(2)}`;
+    if (timezoneCache[cacheKey]) {
+        return res.json(timezoneCache[cacheKey]);
+    }
+    const params = {
+        latitude: lat,
+        longitude: long,
+        current: 'temperature_2m',
+        timezone: 'auto',
+        forecast_days: 1
+    };
+    axios.get('https://api.open-meteo.com/v1/forecast', {params: params, timeout: 10000})
+        .then((resp) => {
+            if (!resp.data || !resp.data.timezone) {
+                return res.json({code: 2, err: 'Timezone unavailable'});
+            }
+            const result = {code: 0, timezone: resp.data.timezone};
+            timezoneCache[cacheKey] = result;
+            res.json(result);
+        }).catch((err) => {
+            console.log(`Timezone request failed: ${err.code || err.message}`);
+            res.json({code: 2, err: 'Timezone unavailable'});
+        });
+});
+
+function isValidCoordinates(lat, long) {
+    return Number.isFinite(lat) && lat >= -90 && lat <= 90 &&
+        Number.isFinite(long) && long >= -180 && long <= 180;
+}
+
 function getAtisGuruPage(icao, attempts = 2) {
     return axios.get(`https://atis.guru/atis/${icao}`, {
         timeout: 15000,
@@ -148,8 +185,7 @@ function getAtisGuruPage(icao, attempts = 2) {
 function getFallbackWeather(req, res, icao) {
     const lat = Number(req.query.lat);
     const long = Number(req.query.long);
-    if (!Number.isFinite(lat) || lat < -90 || lat > 90 ||
-        !Number.isFinite(long) || long < -180 || long > 180) {
+    if (!isValidCoordinates(lat, long)) {
         return res.json({code: 3, err: 'METAR unavailable and airport coordinates are invalid'});
     }
     const params = {
@@ -222,6 +258,11 @@ function extractRunways(text, type) {
     return Array.from(runways);
 }
 
+function extractContextRunways(text) {
+    const match = text.match(/^\s*RWY\s*:\s*([^\n.]+)/im);
+    return match ? (match[1].match(/\b(?:0[1-9]|[12][0-9]|3[0-6])[LCR]?\b/gi) || []) : [];
+}
+
 function parseAtisGuru(html, icao) {
     const result = {
         code: 0,
@@ -231,6 +272,7 @@ function parseAtisGuru(html, icao) {
         arrivalRunways: [],
         departureRunways: []
     };
+    const latestRunwayTime = {arrival: 0, departure: 0};
     const cardPattern = /<h5[^>]*>\s*(Arrival|Departure) ATIS\s*<\/h5>[\s\S]*?<h6[^>]*>([\s\S]*?)<\/h6>[\s\S]*?<div class="atis">([\s\S]*?)<\/div>/gi;
     for (const match of html.matchAll(cardPattern)) {
         const type = match[1].toLowerCase();
@@ -239,7 +281,22 @@ function parseAtisGuru(html, icao) {
         result[type] = {time: time, text: text};
         const timestamp = Date.parse(time.replace(/ UTC$/, 'Z'));
         if (Number.isFinite(timestamp) && Date.now() - timestamp <= ATIS_MAX_AGE_MS) {
-            result[type + 'Runways'] = extractRunways(text, type);
+            let arrivalRunways = extractRunways(text, 'arrival');
+            let departureRunways = extractRunways(text, 'departure');
+            if (type === 'arrival' && arrivalRunways.length === 0) {
+                arrivalRunways = extractContextRunways(text);
+            }
+            if (type === 'departure' && departureRunways.length === 0) {
+                departureRunways = extractContextRunways(text);
+            }
+            if (arrivalRunways.length > 0 && timestamp > latestRunwayTime.arrival) {
+                result.arrivalRunways = Array.from(new Set(arrivalRunways.map((runway) => runway.toUpperCase())));
+                latestRunwayTime.arrival = timestamp;
+            }
+            if (departureRunways.length > 0 && timestamp > latestRunwayTime.departure) {
+                result.departureRunways = Array.from(new Set(departureRunways.map((runway) => runway.toUpperCase())));
+                latestRunwayTime.departure = timestamp;
+            }
         }
     }
     if (!result.arrival && !result.departure) {

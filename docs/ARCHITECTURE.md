@@ -56,6 +56,7 @@ EJS + browser JS
 - `GET /metar?icao=XXXX`：获取并简化 METAR XML；按 ICAO 缓存 10 分钟。
 - `GET /metar?icao=XXXX&lat=...&long=...`：METAR 缺失时按机场坐标返回 Open-Meteo 估算天气。
 - `GET /atis?icao=XXXX`：从 ATIS.guru 页面提取真实 D-ATIS 中的到达/起飞跑道；无数据时返回空结果。
+- `GET /timezone?lat=...&long=...`：按坐标查询 IANA timezone，供浏览器显示机场和飞机当地时间。
 
 服务没有数据库、认证、持久化或多实例同步。若公开部署，`POST /` 可被任意调用方覆盖状态是当前
 设计限制；增加认证时必须同时更新采集端。

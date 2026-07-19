@@ -14,6 +14,8 @@ let _debug = false;
 let _lastDragTime = 0;
 let _unavailableCharts = [];
 let _routes = [];
+let _locationTimezones = {};
+let _lastPlaneTimezoneQuery = 0;
 
 // fix of remaining distance
 let _distanceFix = 0;
@@ -29,6 +31,7 @@ const CHART_DISTANCE = 5;
 const CHART_ZOOM = 15;
 const MAX_ZOOM = CHART_ZOOM;
 const PLANE_ICON_ROTATION = -90;
+const TIMEZONE_REFRESH_MS = 10 * 60 * 1000;
 const PLANE_ICON = {
     path: 'M186.62,464H160a16,16,0,0,1-14.57-22.6l64.46-142.25L113.1,297,77.8,339.77C71.07,348.23,65.7,352,52,352H34.08a17.66,17.66,0,0,1-14.7-7.06c-2.38-3.21-4.72-8.65-2.44-16.41l19.82-71c.15-.53.33-1.06.53-1.58a.38.38,0,0,0,0-.15,14.82,14.82,0,0,1-.53-1.59L16.92,182.76c-2.15-7.61.2-12.93,2.56-16.06a16.83,16.83,0,0,1,13.6-6.7H52c10.23,0,20.16,4.59,26,12l34.57,42.05,97.32-1.44-64.44-142A16,16,0,0,1,160,48h26.91a25,25,0,0,1,19.35,9.8l125.05,152,57.77-1.52c4.23-.23,15.95-.31,18.66-.31C463,208,496,225.94,496,256c0,9.46-3.78,27-29.07,38.16-14.93,6.6-34.85,9.94-59.21,9.94-2.68,0-14.37-.08-18.66-.31l-57.76-1.54-125.36,152A25,25,0,0,1,186.62,464Z',
     anchor: {x: 256, y: 256},
@@ -113,6 +116,46 @@ function updateTimeColor(seconds) {
     $('#spdIndicator').css('border-left-color', color);
 }
 
+function formatLocalTime(timezone) {
+    if (!timezone) {
+        return '—';
+    }
+    try {
+        return new Intl.DateTimeFormat('en-US', {
+            timeZone: timezone,
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: false,
+            timeZoneName: 'short'
+        }).format(new Date());
+    } catch (err) {
+        return '—';
+    }
+}
+
+function updateLocalTimes() {
+    $('#valLocalTimeOrigin').text(formatLocalTime(_locationTimezones.Origin));
+    $('#valLocalTimeDest').text(formatLocalTime(_locationTimezones.Dest));
+    $('#valPlaneTime').text(formatLocalTime(_locationTimezones.Plane));
+}
+
+function loadLocationTimezone(location, lat, long) {
+    $.getJSON(`/timezone?lat=${lat}&long=${long}`, (json) => {
+        if (json && json.code === 0) {
+            _locationTimezones[location] = json.timezone;
+            updateLocalTimes();
+        }
+    });
+}
+
+function loadPlaneTimezone() {
+    if (!_status || Date.now() - _lastPlaneTimezoneQuery < TIMEZONE_REFRESH_MS) {
+        return;
+    }
+    _lastPlaneTimezoneQuery = Date.now();
+    loadLocationTimezone('Plane', _status.latitude, _status.longitude);
+}
+
 function updateStatus(dataChanged) {
     if (!_status) {
         return;
@@ -122,6 +165,7 @@ function updateStatus(dataChanged) {
     updateTimeColor(seconds);
 
     if (dataChanged) {
+        loadPlaneTimezone();
         update('valGS', _status.GS);
 
         let ete = _status.ETE;
@@ -278,6 +322,7 @@ async function init() {
     });
 
     setInterval(getStatus, 3000);
+    setInterval(updateLocalTimes, 30 * 1000);
 }
 
 function calculateViewportZoom(pointsOrBounds) {
@@ -539,7 +584,11 @@ function loadMetar(domId) {
     let icao = end.icaoCode;
     $('#valIcao' + domId).text(icao);
     $('#valElevation' + domId).text(end.elevation);
-    hide('runwayInfo' + domId);
+    loadLocationTimezone(domId, end.lat, end.long);
+    $('#valPlanRunway' + domId).text(end.runway || '');
+    end.runway ? unhide('planRunway' + domId) : hide('planRunway' + domId);
+    hide('atisRunway' + domId);
+    end.runway ? unhide('runwayInfo' + domId) : hide('runwayInfo' + domId);
     $.getJSON(`/metar?icao=${icao}&lat=${end.lat}&long=${end.long}`, (json)=> {
         updateMetar(domId, json);
     });
@@ -561,6 +610,10 @@ function updateMetar(domId, metar) {
             $('#fcatIndicator' + domId).addClass('estimatedWeather');
         } else {
             let raw = metar.raw.substring(13);
+            if (/\bA\d{4}\b/.test(metar.raw) && Number.isFinite(metar.altimInhg)) {
+                const pressureHpa = Math.round(metar.altimInhg * 33.8638866667);
+                raw += `  ·  QNH ${pressureHpa} hPa`;
+            }
             $('#valWeatherSource' + domId).text(`METAR · ${metar.flightCat || 'N/A'}`);
             $('#valMetar' + domId).text(raw);
             $('#fcatIndicator' + domId).addClass(metar.flightCat);
@@ -573,16 +626,17 @@ function updateMetar(domId, metar) {
 
 function updateAtis(domId, atis) {
     const valid = atis && atis.code === 0;
-    const arrivals = valid ? atis.arrivalRunways : [];
-    const departures = valid ? atis.departureRunways : [];
-    if (arrivals.length === 0 && departures.length === 0) {
-        hide('runwayInfo' + domId);
+    const isOrigin = domId === 'Origin';
+    const runways = valid ? (isOrigin ? atis.departureRunways : atis.arrivalRunways) : [];
+    if (runways.length === 0) {
+        hide('atisRunway' + domId);
+        if ($('#planRunway' + domId).hasClass('noDisplay')) {
+            hide('runwayInfo' + domId);
+        }
         return;
     }
-    $('#valArrivalRunway' + domId).text(arrivals.join(' · '));
-    $('#valDepartureRunway' + domId).text(departures.join(' · '));
-    arrivals.length > 0 ? unhide('arrivalRunway' + domId) : hide('arrivalRunway' + domId);
-    departures.length > 0 ? unhide('departureRunway' + domId) : hide('departureRunway' + domId);
+    $('#valAtisRunway' + domId).text(runways.join(' · '));
+    unhide('atisRunway' + domId);
     unhide('runwayInfo' + domId);
 }
 
@@ -591,6 +645,8 @@ function closeMetar() {
         clearInterval(_metarInterval);
         _metarInterval = null;
     }
+    delete _locationTimezones.Origin;
+    delete _locationTimezones.Dest;
     hide('metar');
 }
 

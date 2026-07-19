@@ -49,34 +49,55 @@
             height: 100%;
         }
 
+        #uiOverlay {
+            display: contents;
+        }
+
         #status {
-            max-width: 300px;
+            width: 248px;
+            padding: 0;
             position: absolute;
             z-index: 1;
-            left: 0px;
+            left: 10px;
             top: 10px;
         }
 
         #metar {
-            width: 380px;
+            width: 520px;
             max-width: calc(100% - 20px);
+            padding: 0;
             position: absolute;
             z-index: 1;
-            right: 0px;
+            right: 10px;
             top: 10px;
         }
 
-        #metar .card-header {
-            padding: 10px 14px;
+        #status .col {
+            padding: 0;
         }
 
-        #metarOrigin {
-            margin-bottom: 5px !important;
+        #status .card, #metar .card {
+            background: rgba(255, 255, 255, 0.94);
+        }
+
+        #status .card-header {
+            padding: 8px 4px !important;
+        }
+
+        #status .card-body {
+            padding: 12px;
+        }
+
+        #metar .card-header {
+            padding: 8px 10px !important;
         }
 
         #metarOrigin,#metarDest {
             text-align: left;
             overflow: hidden;
+            flex: 1;
+            min-width: 0;
+            margin: 0 !important;
         }
 
         #valIcao, #valFlightCat {
@@ -93,8 +114,9 @@
 
         .descent-ref {
             background: #efefef;
-            margin-top: 10px;
-            padding: 6px 0px;
+            margin-top: 8px;
+            padding: 5px 0;
+            font-size: 0.88rem;
         }
 
         .indicator {
@@ -104,8 +126,8 @@
 
         .button-box {
             display: inline-block;
-            font-size: 0.8em;
-            width: 80px;
+            font-size: 0.68rem;
+            width: 72px;
         }
 
         .noDisplay {
@@ -125,14 +147,14 @@
         }
 
         .airport-code {
-            font-size: 1.25rem;
+            font-size: 1.05rem;
             font-weight: 700;
             letter-spacing: 0.06em;
         }
 
         .airport-meta, .weather-source {
             color: #6c757d;
-            font-size: 0.7rem;
+            font-size: 0.62rem;
             text-transform: uppercase;
             letter-spacing: 0.05em;
         }
@@ -141,51 +163,96 @@
             display: block;
             margin-top: 5px;
             font-family: monospace;
-            font-size: 0.78rem;
-            line-height: 1.35;
+            font-size: 0.68rem;
+            line-height: 1.25;
         }
 
-        .runway-info {
-            border-top: 1px solid #e9ecef;
-            background: rgba(248, 249, 250, 0.92);
-        }
-
-        .runway-info.noDisplay {
-            display: none;
-        }
-
-        .runway-source {
-            padding: 5px 14px 0;
-            color: #6c757d;
-            font-size: 0.6rem;
-            font-weight: 700;
-            letter-spacing: 0.08em;
-        }
-
-        .runway-grid {
+        .airport-cards {
             display: flex;
+            gap: 6px;
         }
 
-        .runway-item {
-            flex: 1;
-            padding: 8px 14px;
+        .runway-inline {
+            margin-top: 5px;
+            padding-top: 5px;
+            border-top: 1px solid #e2e6ea;
+            font-size: 0.78rem;
+            font-weight: 700;
         }
 
-        .runway-item + .runway-item {
-            border-left: 1px solid #e9ecef;
+        .runway-source-label {
+            margin-right: 3px;
+            color: #7b838a;
+            font-size: 0.56rem;
+            font-weight: 700;
+            letter-spacing: 0.07em;
+            vertical-align: 0.08rem;
         }
 
-        .runway-label {
-            display: block;
+        .runway-separator {
+            margin: 0 6px;
+            color: #adb5bd;
+            font-weight: 400;
+        }
+
+        .plane-local-time {
+            margin-top: 5px;
             color: #6c757d;
-            font-size: 0.65rem;
-            font-weight: 700;
-            letter-spacing: 0.08em;
+            font-size: 0.62rem;
+            font-weight: 600;
+            letter-spacing: 0.05em;
         }
 
-        .runway-value {
+        .flight-distance {
             font-size: 1rem;
-            font-weight: 700;
+        }
+
+        .flight-speed {
+            font-size: 1rem;
+        }
+
+        @media (max-width: 800px) {
+            #status { width: 220px; }
+            #metar { width: 470px; }
+            .button-box { width: 64px; }
+        }
+
+        @media (orientation: portrait) and (max-width: 600px) {
+            #uiOverlay {
+                display: contents;
+            }
+
+            #status {
+                top: 6px;
+                left: 6px;
+                width: min(320px, calc(100% - 12px));
+                padding: 0;
+            }
+
+            #status .card {
+                margin-bottom: 0 !important;
+            }
+
+            #metar {
+                top: auto;
+                right: auto;
+                bottom: 6px;
+                left: 6px;
+                width: min(320px, calc(100% - 12px));
+                max-width: none;
+                max-height: 48vh;
+                padding: 0;
+                overflow-y: auto;
+                scrollbar-width: none;
+            }
+
+            #metar::-webkit-scrollbar {
+                display: none;
+            }
+
+            .airport-cards { flex-direction: column; }
+            #metarOrigin, #metarDest { width: 100%; }
+            .weather-raw { font-size: 0.62rem; }
         }
 
     </style>
@@ -202,6 +269,8 @@
 
 <div id="map"></div>
 
+<div id="uiOverlay">
+
 <div class="container" id="status">
     <main>
         <div class="row row-cols-1 row-cols-md-1 mb-3 text-center">
@@ -217,18 +286,19 @@
                         <div class="button-box">
                             Zoom<br/><input type="checkbox" checked data-toggle="toggle" data-size="sm" id="chkAutoZoom"/>
                         </div>
+                        <div class="plane-local-time">POSITION · <span id="valPlaneTime">—</span></div>
                     </div>
                     <div class="card-body">
                         <div class="progress">
                             <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" aria-valuenow="75" aria-valuemin="0" aria-valuemax="100" style="width: 0%" id="pgbPercent"></div>
                         </div>
-                        <span style="font-size: 1.2em;">
+                        <span class="flight-distance">
                             <b><span id="valDistance">0.0</span> <sup>nm</sup></b>
                             + <span style="font-size:80%;"><span id="valRemainingDist">0.0</span> <sup>nm</sup></span>
                             <button type="button" class="btn btn-light btn-sm" id="btFixDistance" style="margin-bottom: 5px;">...</button>
                         </span>
                         <ul class="list-unstyled mt-3 mb-4" style="margin: 0px 0px !important;">
-                            <li style="font-size: 1.2em;">
+                            <li class="flight-speed">
                                 <b><span id="valGS">0.0</span> <sup>kts</sup></b>
                                 <b><span id="valAltitude">0.0</span> <sup>ft</sup></b>
                             </li>
@@ -250,52 +320,44 @@
 </div>
 
 <div class="container noDisplay" id="metar">
-    <main>
-        <div class="row row-cols-1 row-cols-md-1 mb-3 text-center">
-            <div class="col">
+    <main class="airport-cards">
                 <div class="card mb-4 rounded-3 shadow-sm" id="metarOrigin">
                     <div class="card-header py-3 indicator" id="fcatIndicatorOrigin">
                         <div class="airport-title">
-                            <span><span class="airport-code" id="valIcaoOrigin">ZBAA</span> <span class="airport-meta">ORIGIN</span></span>
-                            <span class="airport-meta"><span id="valElevationOrigin">0</span> ft</span>
+                            <span class="airport-code" id="valIcaoOrigin">ZBAA</span>
+                            <span class="airport-meta"><span id="valElevationOrigin">0</span> FT · <span id="valLocalTimeOrigin">—</span></span>
                         </div>
                         <div class="weather-source"><span id="valWeatherSourceOrigin">WEATHER</span> · <span id="valMetarTimeOrigin">-</span></div>
                         <span class="weather-raw" id="valMetarOrigin"></span>
-                    </div>
-                    <div class="runway-info noDisplay" id="runwayInfoOrigin">
-                        <div class="runway-source">D-ATIS · ATIS.GURU</div>
-                        <div class="runway-grid">
-                            <div class="runway-item" id="departureRunwayOrigin"><span class="runway-label">DEPARTURE</span><span class="runway-value" id="valDepartureRunwayOrigin"></span></div>
-                            <div class="runway-item" id="arrivalRunwayOrigin"><span class="runway-label">ARRIVAL</span><span class="runway-value" id="valArrivalRunwayOrigin"></span></div>
+                        <div class="runway-inline noDisplay" id="runwayInfoOrigin">
+                            <span id="planRunwayOrigin"><span class="runway-source-label">PLAN</span><span id="valPlanRunwayOrigin"></span></span>
+                            <span class="noDisplay" id="atisRunwayOrigin"><span class="runway-separator">·</span><span class="runway-source-label">ATIS</span><span id="valAtisRunwayOrigin"></span></span>
                         </div>
                     </div>
                 </div>
                 <div class="card mb-4 rounded-3 shadow-sm" id="metarDest">
                     <div class="card-header py-3 indicator" id="fcatIndicatorDest">
                         <div class="airport-title">
-                            <span><span class="airport-code" id="valIcaoDest">ZBAA</span> <span class="airport-meta">DESTINATION</span></span>
-                            <span class="airport-meta"><span id="valElevationDest">0</span> ft</span>
+                            <span class="airport-code" id="valIcaoDest">ZBAA</span>
+                            <span class="airport-meta"><span id="valElevationDest">0</span> FT · <span id="valLocalTimeDest">—</span></span>
                         </div>
                         <div class="weather-source"><span id="valWeatherSourceDest">WEATHER</span> · <span id="valMetarTimeDest">-</span></div>
                         <span class="weather-raw" id="valMetarDest"></span>
-                    </div>
-                    <div class="runway-info noDisplay" id="runwayInfoDest">
-                        <div class="runway-source">D-ATIS · ATIS.GURU</div>
-                        <div class="runway-grid">
-                            <div class="runway-item" id="departureRunwayDest"><span class="runway-label">DEPARTURE</span><span class="runway-value" id="valDepartureRunwayDest"></span></div>
-                            <div class="runway-item" id="arrivalRunwayDest"><span class="runway-label">ARRIVAL</span><span class="runway-value" id="valArrivalRunwayDest"></span></div>
+                        <div class="runway-inline noDisplay" id="runwayInfoDest">
+                            <span id="planRunwayDest"><span class="runway-source-label">PLAN</span><span id="valPlanRunwayDest"></span></span>
+                            <span class="noDisplay" id="atisRunwayDest"><span class="runway-separator">·</span><span class="runway-source-label">ATIS</span><span id="valAtisRunwayDest"></span></span>
                         </div>
                     </div>
                 </div>
-            </div>
-        </div>
     </main>
+</div>
+
 </div>
 
 </body>
 
 <script src="js/Utils.js?v=1"></script>
-<script src="js/FlightMonitor.js?v=5"></script>
+<script src="js/FlightMonitor.js?v=6"></script>
 <script type="text/javascript">
     _debug = <%=debug%>;
 </script>
