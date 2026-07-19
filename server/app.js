@@ -14,6 +14,8 @@ const atisCache = {};
 
 const WEATHER_CACHE_MS = 10 * 60 * 1000;
 const ATIS_CACHE_MS = 5 * 60 * 1000;
+const ATIS_MAX_AGE_MS = 12 * 60 * 60 * 1000;
+const atisHttpsAgent = new https.Agent({family: 4});
 
 app.set('views', __dirname + '/views');
 app.set('view engine', 'ejs');
@@ -120,18 +122,28 @@ app.get('/atis', (req, res) => {
         return res.json(cache);
     }
 
-    axios.get(`https://atis.guru/atis/${icao}`, {
-        timeout: 10000,
-        headers: {'User-Agent': 'FlightMonitor/1.0'}
-    }).then((resp) => {
+    getAtisGuruPage(icao).then((resp) => {
         const atis = parseAtisGuru(resp.data, icao);
         atisCache[icao] = atis;
         res.json(atis);
     }).catch((err) => {
-        console.log(err);
+        console.log(`ATIS.guru request failed for ${icao}: ${err.code || err.message}`);
         res.json({code: 2, source: 'atis.guru', icao: icao});
     });
 });
+
+function getAtisGuruPage(icao, attempts = 2) {
+    return axios.get(`https://atis.guru/atis/${icao}`, {
+        timeout: 15000,
+        httpsAgent: atisHttpsAgent,
+        headers: {'User-Agent': 'FlightMonitor/1.0'}
+    }).catch((err) => {
+        if (attempts > 1 && ['ETIMEDOUT', 'ECONNRESET', 'EAI_AGAIN'].includes(err.code)) {
+            return getAtisGuruPage(icao, attempts - 1);
+        }
+        throw err;
+    });
+}
 
 function getFallbackWeather(req, res, icao) {
     const lat = Number(req.query.lat);
@@ -194,10 +206,11 @@ function extractRunways(text, type) {
     const runways = new Set();
     const patterns = type === 'arrival' ? [
         /(?:LDG|LANDING|ARR(?:IVAL)?)\s+(?:RWY|RUNWAY)\s+([^\n.]+)/gi,
+        /RWY\s*:?\s*([^\n.]+?)\s+FOR\s+ARR/gi,
         /EXP(?:ECT)?\s+[^\n]*?\s+RWY\s+([0-9]{2}[LCR]?)/gi
     ] : [
         /(?:DEP(?:ARTURE)?|TKOF|TAKEOFF)\s+(?:RWY|RUNWAY)\s+([^\n.]+)/gi,
-        /RUNWAY\s+([0-9]{2}[LCR]?)\s+FOR\s+DEPARTURE/gi
+        /(?:RWY|RUNWAY)\s*:?\s*([^\n.]+?)\s+FOR\s+DEP(?:ARTURE)?/gi
     ];
     for (const pattern of patterns) {
         for (const match of text.matchAll(pattern)) {
@@ -224,7 +237,10 @@ function parseAtisGuru(html, icao) {
         const time = decodeHtml(match[2].replace(/<[^>]+>/g, '')).trim();
         const text = decodeHtml(match[3].replace(/<[^>]+>/g, '')).trim();
         result[type] = {time: time, text: text};
-        result[type + 'Runways'] = extractRunways(text, type);
+        const timestamp = Date.parse(time.replace(/ UTC$/, 'Z'));
+        if (Number.isFinite(timestamp) && Date.now() - timestamp <= ATIS_MAX_AGE_MS) {
+            result[type + 'Runways'] = extractRunways(text, type);
+        }
     }
     if (!result.arrival && !result.departure) {
         result.code = 2;

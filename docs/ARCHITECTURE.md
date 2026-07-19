@@ -79,7 +79,8 @@ EJS 引用顺序和全局 API，而不能只改某个文件的导出形式。
 - SimBrief XML API：服务端代理；当前专门为该请求关闭证书校验，这是既存安全债务。
 - Aviation Weather METAR API：服务端代理。
 - Open-Meteo：无 METAR 机场的全球模型天气回退；结果不是机场实测值。
-- ATIS.guru：由 ACARS 请求收集的 D-ATIS；没有公开 JSON API，当前集成依赖其服务端 HTML。
+- ATIS.guru：由 ACARS 请求收集的 D-ATIS；没有公开 JSON API，当前集成依赖其服务端 HTML，
+  强制使用 IPv4并对临时网络错误重试；超过 12 小时的跑道信息不会显示。
 - PM2：`server/service.sh` 和 `server/pm2.config.js` 的生产进程管理器。
 - `server/public/charts/<ICAO>.png/.json`：部署时单独提供且不受 Git 跟踪。
 

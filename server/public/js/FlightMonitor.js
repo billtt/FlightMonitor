@@ -579,8 +579,10 @@ function updateAtis(domId, atis) {
         hide('runwayInfo' + domId);
         return;
     }
-    $('#valArrivalRunway' + domId).text(arrivals.length > 0 ? arrivals.join(' · ') : '—');
-    $('#valDepartureRunway' + domId).text(departures.length > 0 ? departures.join(' · ') : '—');
+    $('#valArrivalRunway' + domId).text(arrivals.join(' · '));
+    $('#valDepartureRunway' + domId).text(departures.join(' · '));
+    arrivals.length > 0 ? unhide('arrivalRunway' + domId) : hide('arrivalRunway' + domId);
+    departures.length > 0 ? unhide('departureRunway' + domId) : hide('departureRunway' + domId);
     unhide('runwayInfo' + domId);
 }
 
