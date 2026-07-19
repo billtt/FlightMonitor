@@ -58,22 +58,16 @@
         }
 
         #metar {
-            font-family: monospace;
-            font-size: 0.9em;
-            width: auto;
-            max-width: 360px;
+            width: 380px;
+            max-width: calc(100% - 20px);
             position: absolute;
             z-index: 1;
             right: 0px;
             top: 10px;
         }
 
-        #metar .card-body {
-            padding: 0px 15px;
-        }
-
         #metar .card-header {
-            font-size: 1.2em;
+            padding: 10px 14px;
         }
 
         #metarOrigin {
@@ -82,6 +76,7 @@
 
         #metarOrigin,#metarDest {
             text-align: left;
+            overflow: hidden;
         }
 
         #valIcao, #valFlightCat {
@@ -121,6 +116,77 @@
         .IFR { border-left-color: red; }
         .MVFR { border-left-color: blue; }
         .VFR { border-left-color: green; }
+        .estimatedWeather { border-left-color: #f39c12; }
+
+        .airport-title {
+            display: flex;
+            align-items: baseline;
+            justify-content: space-between;
+        }
+
+        .airport-code {
+            font-size: 1.25rem;
+            font-weight: 700;
+            letter-spacing: 0.06em;
+        }
+
+        .airport-meta, .weather-source {
+            color: #6c757d;
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .weather-raw {
+            display: block;
+            margin-top: 5px;
+            font-family: monospace;
+            font-size: 0.78rem;
+            line-height: 1.35;
+        }
+
+        .runway-info {
+            border-top: 1px solid #e9ecef;
+            background: rgba(248, 249, 250, 0.92);
+        }
+
+        .runway-info.noDisplay {
+            display: none;
+        }
+
+        .runway-source {
+            padding: 5px 14px 0;
+            color: #6c757d;
+            font-size: 0.6rem;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+        }
+
+        .runway-grid {
+            display: flex;
+        }
+
+        .runway-item {
+            flex: 1;
+            padding: 8px 14px;
+        }
+
+        .runway-item + .runway-item {
+            border-left: 1px solid #e9ecef;
+        }
+
+        .runway-label {
+            display: block;
+            color: #6c757d;
+            font-size: 0.65rem;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+        }
+
+        .runway-value {
+            font-size: 1rem;
+            font-weight: 700;
+        }
 
     </style>
 
@@ -189,18 +255,36 @@
             <div class="col">
                 <div class="card mb-4 rounded-3 shadow-sm" id="metarOrigin">
                     <div class="card-header py-3 indicator" id="fcatIndicatorOrigin">
-                        <span id="valIcaoOrigin">ZBAA</span>
-                        Rwy <span id="valRunwayOrigin">36L</span> (<span id="valElevationOrigin">0</span><sup>ft</sup>)<br/>
-                        <span id="valMetarTimeOrigin" style="font-size: 70%;"></span>
-                        <span id="valMetarOrigin" style="font-size: 70%;"></span>
+                        <div class="airport-title">
+                            <span><span class="airport-code" id="valIcaoOrigin">ZBAA</span> <span class="airport-meta">ORIGIN</span></span>
+                            <span class="airport-meta"><span id="valElevationOrigin">0</span> ft</span>
+                        </div>
+                        <div class="weather-source"><span id="valWeatherSourceOrigin">WEATHER</span> · <span id="valMetarTimeOrigin">-</span></div>
+                        <span class="weather-raw" id="valMetarOrigin"></span>
+                    </div>
+                    <div class="runway-info noDisplay" id="runwayInfoOrigin">
+                        <div class="runway-source">D-ATIS · ATIS.GURU</div>
+                        <div class="runway-grid">
+                            <div class="runway-item"><span class="runway-label">DEPARTURE</span><span class="runway-value" id="valDepartureRunwayOrigin">—</span></div>
+                            <div class="runway-item"><span class="runway-label">ARRIVAL</span><span class="runway-value" id="valArrivalRunwayOrigin">—</span></div>
+                        </div>
                     </div>
                 </div>
                 <div class="card mb-4 rounded-3 shadow-sm" id="metarDest">
                     <div class="card-header py-3 indicator" id="fcatIndicatorDest">
-                        <span id="valIcaoDest">ZBAA</span>
-                        Rwy <span id="valRunwayDest">36L</span> (<span id="valElevationDest">0</span><sup>ft</sup>)<br/>
-                        <span id="valMetarTimeDest" style="font-size: 70%;"></span>
-                        <span id="valMetarDest" style="font-size: 70%;"></span>
+                        <div class="airport-title">
+                            <span><span class="airport-code" id="valIcaoDest">ZBAA</span> <span class="airport-meta">DESTINATION</span></span>
+                            <span class="airport-meta"><span id="valElevationDest">0</span> ft</span>
+                        </div>
+                        <div class="weather-source"><span id="valWeatherSourceDest">WEATHER</span> · <span id="valMetarTimeDest">-</span></div>
+                        <span class="weather-raw" id="valMetarDest"></span>
+                    </div>
+                    <div class="runway-info noDisplay" id="runwayInfoDest">
+                        <div class="runway-source">D-ATIS · ATIS.GURU</div>
+                        <div class="runway-grid">
+                            <div class="runway-item"><span class="runway-label">DEPARTURE</span><span class="runway-value" id="valDepartureRunwayDest">—</span></div>
+                            <div class="runway-item"><span class="runway-label">ARRIVAL</span><span class="runway-value" id="valArrivalRunwayDest">—</span></div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -211,7 +295,7 @@
 </body>
 
 <script src="js/Utils.js?v=1"></script>
-<script src="js/FlightMonitor.js?v=4"></script>
+<script src="js/FlightMonitor.js?v=5"></script>
 <script type="text/javascript">
     _debug = <%=debug%>;
 </script>

@@ -54,6 +54,8 @@ EJS + browser JS
 - `GET /chart-tool`：渲染 chart 对齐工具。
 - `GET /plan`：获取并简化 SimBrief XML 航路。
 - `GET /metar?icao=XXXX`：获取并简化 METAR XML；按 ICAO 缓存 10 分钟。
+- `GET /metar?icao=XXXX&lat=...&long=...`：METAR 缺失时按机场坐标返回 Open-Meteo 估算天气。
+- `GET /atis?icao=XXXX`：从 ATIS.guru 页面提取真实 D-ATIS 中的到达/起飞跑道；无数据时返回空结果。
 
 服务没有数据库、认证、持久化或多实例同步。若公开部署，`POST /` 可被任意调用方覆盖状态是当前
 设计限制；增加认证时必须同时更新采集端。
@@ -76,6 +78,8 @@ EJS 引用顺序和全局 API，而不能只改某个文件的导出形式。
 - Google Maps JavaScript API：浏览器直接加载。
 - SimBrief XML API：服务端代理；当前专门为该请求关闭证书校验，这是既存安全债务。
 - Aviation Weather METAR API：服务端代理。
+- Open-Meteo：无 METAR 机场的全球模型天气回退；结果不是机场实测值。
+- ATIS.guru：由 ACARS 请求收集的 D-ATIS；没有公开 JSON API，当前集成依赖其服务端 HTML。
 - PM2：`server/service.sh` 和 `server/pm2.config.js` 的生产进程管理器。
 - `server/public/charts/<ICAO>.png/.json`：部署时单独提供且不受 Git 跟踪。
 

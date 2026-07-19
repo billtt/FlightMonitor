@@ -538,24 +538,50 @@ function loadMetar(domId) {
     let end = _plan[(domId === 'Origin' ? 'origin' : 'destination')];
     let icao = end.icaoCode;
     $('#valIcao' + domId).text(icao);
-    $('#valRunway' + domId).text(end.runway);
     $('#valElevation' + domId).text(end.elevation);
-    $.getJSON(`/metar?icao=${icao}`, (json)=> {
+    hide('runwayInfo' + domId);
+    $.getJSON(`/metar?icao=${icao}&lat=${end.lat}&long=${end.long}`, (json)=> {
         updateMetar(domId, json);
+    });
+    $.getJSON(`/atis?icao=${icao}`, (json) => {
+        updateAtis(domId, json);
     });
 }
 
 function updateMetar(domId, metar) {
     let valid = metar && (metar.code === 0);
-    $('#valMetarTime' + domId).text(valid ? moment(metar.time).format('HH:mm') : '-');
-    $('#fcatIndicator' + domId).removeClass('IFR LIFR VFR MVFR');
+    $('#valMetarTime' + domId).text(valid ? moment(metar.time).utc().format('HH:mm[Z]') : '-');
+    $('#fcatIndicator' + domId).removeClass('IFR LIFR VFR MVFR estimatedWeather');
     if (valid) {
-        let raw = metar.raw.substring(13);
-        $('#valMetar' + domId).text(raw);
-        $('#fcatIndicator' + domId).addClass(metar.flightCat);
+        if (metar.estimated) {
+            const wind = `${Math.round(metar.windDir).toString().padStart(3, '0')}° / ${metar.windSpeed.toFixed(0)} kt`;
+            const pressure = `${metar.pressureMslHpa.toFixed(0)} hPa`;
+            $('#valWeatherSource' + domId).text('ESTIMATED WEATHER');
+            $('#valMetar' + domId).text(`${metar.temp.toFixed(0)}°C  ·  ${wind}  ·  QNH ~${pressure}`);
+            $('#fcatIndicator' + domId).addClass('estimatedWeather');
+        } else {
+            let raw = metar.raw.substring(13);
+            $('#valWeatherSource' + domId).text(`METAR · ${metar.flightCat || 'N/A'}`);
+            $('#valMetar' + domId).text(raw);
+            $('#fcatIndicator' + domId).addClass(metar.flightCat);
+        }
     } else {
+        $('#valWeatherSource' + domId).text('WEATHER UNAVAILABLE');
         $('#valMetar' + domId).text('');
     }
+}
+
+function updateAtis(domId, atis) {
+    const valid = atis && atis.code === 0;
+    const arrivals = valid ? atis.arrivalRunways : [];
+    const departures = valid ? atis.departureRunways : [];
+    if (arrivals.length === 0 && departures.length === 0) {
+        hide('runwayInfo' + domId);
+        return;
+    }
+    $('#valArrivalRunway' + domId).text(arrivals.length > 0 ? arrivals.join(' · ') : '—');
+    $('#valDepartureRunway' + domId).text(departures.length > 0 ? departures.join(' · ') : '—');
+    unhide('runwayInfo' + domId);
 }
 
 function closeMetar() {

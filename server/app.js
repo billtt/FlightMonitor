@@ -10,6 +10,10 @@ const https = require('https');
 
 let _status = {};
 const metarCache = {};
+const atisCache = {};
+
+const WEATHER_CACHE_MS = 10 * 60 * 1000;
+const ATIS_CACHE_MS = 5 * 60 * 1000;
 
 app.set('views', __dirname + '/views');
 app.set('view engine', 'ejs');
@@ -78,7 +82,7 @@ app.get('/metar', (req, res) => {
     }
     icao = icao.toUpperCase();
     let cache = metarCache[icao];
-    if (cache && (Date.now() - cache.queryTime.getTime() <= 600 * 1000)) {
+    if (cache && (Date.now() - cache.queryTime.getTime() <= WEATHER_CACHE_MS)) {
         return res.json(cache);
     }
     axios.get(`https://aviationweather.gov/api/data/metar?ids=${icao}&format=xml&taf=false&hours=3`)
@@ -89,21 +93,144 @@ app.get('/metar', (req, res) => {
                         return res.json({code: 3, err: err.toString()});
                     }
                     if (!json.response || !json.response.data || !json.response.data[0].METAR) {
-                        return res.json({code: 3, err: 'Invalid response from METAR service'});
+                        return getFallbackWeather(req, res, icao);
                     }
                     let metar = getMetar(json);
                     metarCache[icao] = metar;
                     return res.json(metar);
                 });
             } else {
-                return res.json({code: 2});
+                return getFallbackWeather(req, res, icao);
             }
         })
         .catch((err) => {
             console.log(err);
-            res.json({code: 4, err: err.toString()});
+            getFallbackWeather(req, res, icao);
         });
 });
+
+app.get('/atis', (req, res) => {
+    let icao = req.query.icao;
+    if (!icao || !/^[a-zA-Z]{4}$/.test(icao)) {
+        return res.json({code: 1, err: 'Invalid ICAO code'});
+    }
+    icao = icao.toUpperCase();
+    const cache = atisCache[icao];
+    if (cache && Date.now() - cache.queryTime.getTime() <= ATIS_CACHE_MS) {
+        return res.json(cache);
+    }
+
+    axios.get(`https://atis.guru/atis/${icao}`, {
+        timeout: 10000,
+        headers: {'User-Agent': 'FlightMonitor/1.0'}
+    }).then((resp) => {
+        const atis = parseAtisGuru(resp.data, icao);
+        atisCache[icao] = atis;
+        res.json(atis);
+    }).catch((err) => {
+        console.log(err);
+        res.json({code: 2, source: 'atis.guru', icao: icao});
+    });
+});
+
+function getFallbackWeather(req, res, icao) {
+    const lat = Number(req.query.lat);
+    const long = Number(req.query.long);
+    if (!Number.isFinite(lat) || lat < -90 || lat > 90 ||
+        !Number.isFinite(long) || long < -180 || long > 180) {
+        return res.json({code: 3, err: 'METAR unavailable and airport coordinates are invalid'});
+    }
+    const params = {
+        latitude: lat,
+        longitude: long,
+        current: 'temperature_2m,wind_speed_10m,wind_direction_10m,pressure_msl',
+        wind_speed_unit: 'kn',
+        timezone: 'UTC'
+    };
+    axios.get('https://api.open-meteo.com/v1/forecast', {params: params, timeout: 10000})
+        .then((resp) => {
+            const current = resp.data && resp.data.current;
+            if (!current || !Number.isFinite(current.temperature_2m) ||
+                !Number.isFinite(current.wind_speed_10m) ||
+                !Number.isFinite(current.wind_direction_10m) ||
+                !Number.isFinite(current.pressure_msl)) {
+                return res.json({code: 4, err: 'Invalid weather response'});
+            }
+            const weather = {
+                code: 0,
+                source: 'open-meteo',
+                estimated: true,
+                queryTime: new Date(),
+                icao: icao,
+                time: current.time + 'Z',
+                temp: current.temperature_2m,
+                windDir: current.wind_direction_10m,
+                windSpeed: current.wind_speed_10m,
+                altimInhg: current.pressure_msl * 0.0295299830714,
+                pressureMslHpa: current.pressure_msl
+            };
+            metarCache[icao] = weather;
+            res.json(weather);
+        }).catch((err) => {
+            console.log(err);
+            res.json({code: 4, err: err.toString()});
+        });
+}
+
+function decodeHtml(value) {
+    const named = {amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' '};
+    return value.replace(/&#x([0-9a-f]+);|&#(\d+);|&([a-z]+);/gi, (match, hex, decimal, name) => {
+        if (hex) {
+            return String.fromCodePoint(parseInt(hex, 16));
+        }
+        if (decimal) {
+            return String.fromCodePoint(parseInt(decimal, 10));
+        }
+        return named[name.toLowerCase()] || match;
+    });
+}
+
+function extractRunways(text, type) {
+    const runways = new Set();
+    const patterns = type === 'arrival' ? [
+        /(?:LDG|LANDING|ARR(?:IVAL)?)\s+(?:RWY|RUNWAY)\s+([^\n.]+)/gi,
+        /EXP(?:ECT)?\s+[^\n]*?\s+RWY\s+([0-9]{2}[LCR]?)/gi
+    ] : [
+        /(?:DEP(?:ARTURE)?|TKOF|TAKEOFF)\s+(?:RWY|RUNWAY)\s+([^\n.]+)/gi,
+        /RUNWAY\s+([0-9]{2}[LCR]?)\s+FOR\s+DEPARTURE/gi
+    ];
+    for (const pattern of patterns) {
+        for (const match of text.matchAll(pattern)) {
+            for (const runway of match[1].match(/\b(?:0[1-9]|[12][0-9]|3[0-6])[LCR]?\b/gi) || []) {
+                runways.add(runway.toUpperCase());
+            }
+        }
+    }
+    return Array.from(runways);
+}
+
+function parseAtisGuru(html, icao) {
+    const result = {
+        code: 0,
+        source: 'atis.guru',
+        icao: icao,
+        queryTime: new Date(),
+        arrivalRunways: [],
+        departureRunways: []
+    };
+    const cardPattern = /<h5[^>]*>\s*(Arrival|Departure) ATIS\s*<\/h5>[\s\S]*?<h6[^>]*>([\s\S]*?)<\/h6>[\s\S]*?<div class="atis">([\s\S]*?)<\/div>/gi;
+    for (const match of html.matchAll(cardPattern)) {
+        const type = match[1].toLowerCase();
+        const time = decodeHtml(match[2].replace(/<[^>]+>/g, '')).trim();
+        const text = decodeHtml(match[3].replace(/<[^>]+>/g, '')).trim();
+        result[type] = {time: time, text: text};
+        result[type + 'Runways'] = extractRunways(text, type);
+    }
+    if (!result.arrival && !result.departure) {
+        result.code = 2;
+    }
+    return result;
+}
 
 function getFlightPlan(raw) {
     function parseF(numObj) {
